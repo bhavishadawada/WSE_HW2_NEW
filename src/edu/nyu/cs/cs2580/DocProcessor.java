@@ -100,9 +100,6 @@ class DocProcessor{
 
         //Pattern nonASCII = Pattern.compile("[^\\x00-\\x7f]");
         //str = nonASCII.matcher(str).replaceAll();
-
-        Pattern ptn = Pattern.compile("([^a-zA-Z0-9])");
-        str = ptn.matcher(str).replaceAll(" $1 ");
         return str;
     }
     

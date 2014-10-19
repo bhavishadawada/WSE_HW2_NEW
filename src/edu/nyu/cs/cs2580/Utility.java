@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
+import java.util.regex.Pattern;
 
 /**
  * This class contains all utility methods
@@ -16,7 +17,12 @@ public class Utility {
 	// This can then help removing stop words
 	public static Set<String> tokenize(String document){
 		Set<String> uniqueTermSet = new HashSet<String>();
-		StringTokenizer st = new StringTokenizer(document);
+		
+		String str;
+        Pattern ptn = Pattern.compile("([^a-zA-Z0-9])");
+        str = ptn.matcher(document).replaceAll(" $1 ");
+
+		StringTokenizer st = new StringTokenizer(str);
 		while(st.hasMoreTokens()){
 			String token = st.nextToken().toLowerCase().trim();
 			if(token.length() > 0){
