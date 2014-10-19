@@ -61,7 +61,6 @@ public class IndexerInvertedDoconly extends Indexer {
 			// move the reading of files logic to utility
 			
 			DocProcessor dp = new DocProcessor(_options._corpusPrefix);
-			String line = null;
 			while (dp.hasNextDoc()) {
 				// The problem is this will include num_views also
 				dp.nextDoc();
@@ -119,14 +118,12 @@ public class IndexerInvertedDoconly extends Indexer {
 				// check how to do document frequency here
 				char start = token.charAt(0);
 				if (_characterMap.containsKey(start)) {
-					Map<String, List<Integer>> wordMap = _characterMap
-							.get(start);
+					Map<String, List<Integer>> wordMap = _characterMap.get(start);
 					if (wordMap.containsKey(token)) {
 						List<Integer> docList = wordMap.get(token);
 						if(!docList.contains(docId)){
 							docList.add(docId);
 						}
-
 					}
 					else{
 						List<Integer> tempDocList = new ArrayList<Integer>();
@@ -202,20 +199,22 @@ public class IndexerInvertedDoconly extends Indexer {
 			while(scan.hasNextLine()){
 				String line = scan.nextLine();
 				String lineArray[] = line.split(":");
-				String word = lineArray[0];
-				String[] docIDList = lineArray[1].split(" ");
-				List<Integer> docList = new ArrayList<Integer>();
-				for(int i = 0; i < docIDList.length; i++){
-					Integer docId = Integer.parseInt(docIDList[i].trim());
-					docList.add(docId);	
-				}
-				if(tempMap.containsKey(word)){
-					List<Integer> tempList = tempMap.get(word);
-					tempList.addAll(docList);
-					tempMap.put(word,tempList);
-				}
-				else{
-					tempMap.put(word, docList);
+				if(lineArray.length == 2){
+					String word = lineArray[0];
+					String[] docIDList = lineArray[1].split(" ");
+					List<Integer> docList = new ArrayList<Integer>();
+					for(int i = 0; i < docIDList.length; i++){
+						Integer docId = Integer.parseInt(docIDList[i].trim());
+						docList.add(docId);	
+					}
+					if(tempMap.containsKey(word)){
+						List<Integer> tempList = tempMap.get(word);
+						tempList.addAll(docList);
+						tempMap.put(word,tempList);
+					}
+					else{
+						tempMap.put(word, docList);
+					}
 				}
 			}
 

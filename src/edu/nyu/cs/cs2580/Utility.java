@@ -18,7 +18,10 @@ public class Utility {
 		Set<String> uniqueTermSet = new HashSet<String>();
 		StringTokenizer st = new StringTokenizer(document);
 		while(st.hasMoreTokens()){
-			uniqueTermSet.add(st.nextToken().toLowerCase().trim());
+			String token = st.nextToken().toLowerCase().trim();
+			if(token.length() > 0){
+				uniqueTermSet.add(token);
+			}
 		}
 		return uniqueTermSet;
 	}
