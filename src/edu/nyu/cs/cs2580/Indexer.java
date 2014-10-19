@@ -128,7 +128,7 @@ public abstract class Indexer {
       if (options._indexerType.equals("fullscan")) {
         return new IndexerFullScan(options);
       } else if (options._indexerType.equals("inverted-doconly")) {
-        return new IndexerInvertedDoconly_Simple(options);
+        return new IndexerInvertedDoconly(options);
       } else if (options._indexerType.equals("inverted-occurrence")) {
         return new IndexerInvertedOccurrence(options);
       } else if (options._indexerType.equals("inverted-compressed")) {

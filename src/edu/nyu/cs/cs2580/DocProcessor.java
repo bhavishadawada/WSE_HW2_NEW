@@ -7,8 +7,9 @@ import org.jsoup.select.Elements;
 
 import java.util.Scanner;
 import java.util.regex.Pattern;
-
 import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
 import java.io.FileReader;
 import java.io.File;
@@ -21,43 +22,76 @@ class DocProcessor{
     public String title;
     public int index;
     public File[] file;
+    public Scanner sc;
+    public boolean simple;
 
-    public DocProcessor(String path){
-        File dir = new File(path);
-        file = dir.listFiles();
+
+    public DocProcessor(String path) throws FileNotFoundException{
+    	if(path.equals("data/simple")){
+    		String  corpusFile = path + "/corpus.tsv";
+    		file = new File[0];
+    		sc = new Scanner(new FileInputStream(corpusFile));
+    		simple = true;
+    	}
+    	else{
+    		File dir = new File(path);
+    		file = dir.listFiles();
+    		simple = false;
+    	}
         index = 0;
     }
 
     public Boolean hasNextDoc(){
-        return index < file.length;
+    	if(simple){
+    		return sc.hasNextLine();
+    	}
+    	else{
+    		return index < file.length;
+    	}
     }
 
     public void nextDoc(){
-        if(index < file.length){
-            title = file[index].getName();
+    	if(simple){
+    		if(sc.hasNextLine()){
+    			String content = sc.nextLine();
+				Scanner s = new Scanner(content).useDelimiter("\t");
+    			title = s.next();
+    			body = s.next();
+                index++;
+    		}
+            else{
+                title = null;
+                body = null;
+            }
+		}
+    	else{
+            if(index < file.length){
+                title = file[index].getName();
 
-            StringBuilder sb= new StringBuilder();
-            try{
-                BufferedReader br = new BufferedReader(new FileReader(file[index]));
-                String line = br.readLine();
-                while(line != null){
-                    sb.append(line);
-                    line = br.readLine();
+                StringBuilder sb= new StringBuilder();
+                try{
+                    BufferedReader br = new BufferedReader(new FileReader(file[index]));
+                    String line = br.readLine();
+                    while(line != null){
+                        sb.append(line);
+                        line = br.readLine();
+                    }
                 }
-            }
-            catch(IOException e){
-                e.printStackTrace();
-            }
+                catch(IOException e){
+                    e.printStackTrace();
+                }
 
-            body = sb.toString();
-            body = docProcess(body);
+                body = sb.toString();
+                body = docProcess(body);
 
-            index++;
-        }
-        else{
-            title = null;
-            body = null;
-        }
+                index++;
+            }
+            else{
+                title = null;
+                body = null;
+            }
+    	}
+    	System.out.println(index);
     }
 
     public String docProcess(String input){

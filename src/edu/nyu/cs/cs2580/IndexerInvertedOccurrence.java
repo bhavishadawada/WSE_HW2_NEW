@@ -31,12 +31,13 @@ public class IndexerInvertedOccurrence extends Indexer {
 	@Override
 	public void constructIndex() throws IOException {
 		//String corpusFile = _options._corpusPrefix;
-		/*DocProcessor dp = new DocProcessor(corpusFile);
-	  while(dp.hasNextDoc()){
-		  dp.nextDoc();
-		  processDocument(dp.title, dp.body);
-	  }*/
+		DocProcessor dp = new DocProcessor(_options._corpusPrefix);
+	    while(dp.hasNextDoc()){
+	  	   dp.nextDoc();
+	  	   processDocument(dp.title, dp.body);
+	    }
 
+	  /*
 		String corpusFile = _options._corpusPrefix + "/testFile.tsv";
 		System.out.println("Construct index from: " + corpusFile);
 
@@ -50,6 +51,7 @@ public class IndexerInvertedOccurrence extends Indexer {
 		finally {
 			reader.close();
 		}
+		*/
 	}
 
 	private void processDocument(String content){
