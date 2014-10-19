@@ -94,15 +94,34 @@ class DocProcessor{
     	System.out.println(index);
     }
 
-    public String docProcess(String input){
+    static public String docProcess(String input){
         Document doc = Jsoup.parse(input);
         String str = doc.text();
 
         //Pattern nonASCII = Pattern.compile("[^\\x00-\\x7f]");
         //str = nonASCII.matcher(str).replaceAll();
 
-        //Pattern ptn = Pattern.compile("[^a-zA-Z0-9]");
-        //str = ptn.matcher(str).replaceAll(" ");
+        Pattern ptn = Pattern.compile("([^a-zA-Z0-9])");
+        str = ptn.matcher(str).replaceAll(" $1 ");
         return str;
+    }
+    
+    static public void main(String[] args){
+    	File f = new File("data/wiki/'03_Bonnie_&_Clyde");
+        StringBuilder sb= new StringBuilder();
+        try{
+            BufferedReader br = new BufferedReader(new FileReader(f));
+            String line = br.readLine();
+            while(line != null){
+                sb.append(line);
+                line = br.readLine();
+            }
+        }
+        catch(IOException e){
+            e.printStackTrace();
+        }
+
+        String output = docProcess(sb.toString());
+        System.out.print(output);
     }
 }
