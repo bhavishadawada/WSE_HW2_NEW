@@ -58,7 +58,9 @@ public class IndexerInvertedDoconly extends Indexer {
 	public void constructIndex() throws IOException {
 			String corpusFile = _options._corpusPrefix;
 			System.out.println("Construct index from: " + corpusFile);
-			// move the reading of files logic to utility
+
+			//delete everything in index before constructIndex
+			deleteFile();
 			
 			DocProcessor dp = new DocProcessor(_options._corpusPrefix);
 			while (dp.hasNextDoc()) {
@@ -162,6 +164,17 @@ public class IndexerInvertedDoconly extends Indexer {
 				writer.close();
 			}
 
+		}
+
+		private void deleteFile(){
+			String path = _options._indexPrefix + "/";
+    		File dir = new File(path);
+			File[] fileLs = dir.listFiles();
+			for(File file : fileLs){
+				//if(file.getName().endsWith(".idx")){
+					file.delete();
+				//}
+			}
 		}
 
 		private void writeFrequency(Map<String, Integer> frequency) throws IOException{
