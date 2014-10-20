@@ -29,7 +29,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 
 	// Stores all Document in memory.
 	
-	final int BULK_DOC_PROCESSING_SIZE = 3;
+	final int BULK_DOC_PROCESSING_SIZE = 300;
 
 	// Data structure to maintain unique terms with id
 	private Map<String, Integer> _dictionary = new HashMap<String, Integer>();
