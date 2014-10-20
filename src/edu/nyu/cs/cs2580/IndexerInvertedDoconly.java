@@ -53,7 +53,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 	//private Vector<String> _terms = new Vector<String>();
 
 	// Stores all Document in memory.
-	private List<Document> _documents = new ArrayList<Document>();
+	private List<DocumentIndexed> _documents = new ArrayList<DocumentIndexed>();
 	private Map<Character, Map<String, List<Integer>>> _characterMap = new HashMap<Character, Map<String, List<Integer>>>();
 	
 	// Provided for serialization
@@ -105,16 +105,11 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 
 		private void processDocument(String title, String body) {
 			int docId = _numDocs;
-			DocumentIndexed doc = new DocumentIndexed(docId);
+			++ _numDocs;
 			Set<String> uniqueTermSetTitle = Utility.tokenize(title);
 			buildMapFromTokens(uniqueTermSetTitle,docId);
-			doc.setTitle(title);
-			// set the url here
 			Set<String> uniqueTermSetBody = Utility.tokenize(body);
 			buildMapFromTokens(uniqueTermSetBody,docId);
-			// think if we need to store the term vector along with the doc object
-			_documents.add(doc);
-			++ _numDocs;
 
 			//build _dictionary
 			for(String token:uniqueTermSetBody){
@@ -133,6 +128,13 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		        int id = _dictionary.get(token);
 				_corpusTermFrequency.set(id, _corpusTermFrequency.get(id) + 1);
 			}
+
+			DocumentIndexed doc = new DocumentIndexed(docId);
+			doc.setTitle(title);
+			doc._termNum = bodyTermVector.size();
+			doc.setUrl(Integer.toString(docId));
+
+			_documents.add(doc);
 		}
 
 		private void buildMapFromTokens(Set<String> uniqueTermSet, int docId){
@@ -302,7 +304,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		}
 
 		@Override
-		public Document getDoc(int docid) {
+		public DocumentIndexed getDoc(int docid) {
 			return null;
 		}
 
@@ -312,7 +314,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 
 		//TODO: This is to be implemented as discussed in class?????
 		@Override
-		public Document nextDoc(Query query, int docid) {
+		public DocumentIndexed nextDoc(Query query, int docid) {
 			ArrayList<ArrayList<Integer>> postLsArr = new ArrayList<ArrayList<Integer>>();
 			ArrayList<Integer> cache = new ArrayList<Integer>();
 
@@ -454,7 +456,31 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		// number of times a term occurs in document
 		@Override
 		public int documentTermFrequency(String term, String url) {
-			SearchEngine.Check(false, "Not implemented!");
-			return 0;
+			int docid = Integer.parseInt(url);
+			System.out.println("get docid: " + docid);
+			if(_dictionary.containsKey(term)){
+				Query query = new Query(term);
+				DocumentIndexed doc = nextDoc(query, docid-1);
+				if(doc._docid == docid){
+					return 1;
+				}
+				else{
+					return 0;
+				}
+			}
+			else{
+				return 0;
+			}
+		}
+
+		@Override
+		public int documentTotalTermFrequency(String url) {
+			int docid = Integer.parseInt(url);
+			if(docid < _documents.size()){
+				return 1;
+			}
+			else{
+				return 0;
+			}
 		}
 	}

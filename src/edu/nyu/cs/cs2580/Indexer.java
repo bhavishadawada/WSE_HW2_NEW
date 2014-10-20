@@ -119,6 +119,8 @@ public abstract class Indexer {
   // Number of times {@code term} appeared in the document {@code url}.
   public abstract int documentTermFrequency(String term, String url);
 
+  public abstract int documentTotalTermFrequency(String url);
+
   /**
    * All Indexers must be created through this factory class based on the
    * provided {@code options}.
@@ -137,4 +139,5 @@ public abstract class Indexer {
       return null;
     }
   }
+
 }

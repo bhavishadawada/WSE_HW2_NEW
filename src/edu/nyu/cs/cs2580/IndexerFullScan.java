@@ -240,4 +240,10 @@ class IndexerFullScan extends Indexer implements Serializable {
     return retval;
   }
 
+  @Override
+  public int documentTotalTermFrequency(String url) {
+    SearchEngine.Check(false, "Not implemented!");
+  	return 0;
+  }
+
 }
