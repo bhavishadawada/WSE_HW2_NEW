@@ -32,6 +32,8 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 
 // check if this should implement serializable
 public class IndexerInvertedDoconly extends Indexer implements Serializable{
+	private static final long serialVersionUID = 3361289105007800861L;
+
 	final int BULK_DOC_PROCESSING_SIZE = 300;
 
 	// Data structure to maintain unique terms with id
@@ -290,6 +292,13 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		    System.out.println(Integer.toString(_numDocs) + " documents loaded " +
 		        "with " + Long.toString(_totalTermFrequency) + " terms!");
 		    reader.close();
+		    
+		    /* 
+		    Query query = new Query("analyst agarose");
+		    Document doc = nextDoc(query, -1);
+		    System.out.println(doc.getTitle());
+		    doc = nextDoc(query, doc._docid);
+		    */
 		}
 
 		@Override
@@ -304,19 +313,128 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		//TODO: This is to be implemented as discussed in class?????
 		@Override
 		public Document nextDoc(Query query, int docid) {
+			ArrayList<ArrayList<Integer>> postLsArr = new ArrayList<ArrayList<Integer>>();
+			ArrayList<Integer> cache = new ArrayList<Integer>();
+
 			query.processQuery();
 			List<String> queryVector = query._tokens;
 			for (String search : queryVector) {
 				if(_dictionary.containsKey(search)){
+
 					int lineNum = _termLineNum.get(_dictionary.get(search));
 					String fileName = _options._indexPrefix + "/"+ search.charAt(0) + ".idx";
+					
+
 					System.out.println("queryTerm " + search);
 					System.out.println("Search in " + fileName);
 					System.out.println("lineNum " + lineNum);
-					//BufferedReader br = new BufferedReader(new FileReader(fileName));
+
+					// build post list
+					BufferedReader br;
+					try {
+						br = new BufferedReader(new FileReader(fileName));
+					    String line = "";
+					    int li = 0;
+					    while(line != null && li < lineNum){
+					    	li++;
+					    	line = br.readLine();
+					    }
+					    if(li == lineNum){
+					    	ArrayList<Integer> postLs = buildPostLs(line);
+					    	postLsArr.add(postLs);
+					    	cache.add(0);
+					    }
+					    else{
+					    	System.out.println("error lineNum: " + li);
+					    	return null;
+					    }
+					} catch (FileNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}
 			}
-			return null;
+			
+			if(postLsArr.size() > 0){
+				Boolean hasNextDocId = true;
+			    while(hasNextDocId){
+			    	int nextDocId = -1;
+			    	int cnt = 0;
+			    	for(int i = 0; i < postLsArr.size(); i++){
+			    		int c = cache.get(i);
+			    		ArrayList<Integer> postLs = postLsArr.get(i);
+			    		c = postLsNext(postLs, c, docid);
+			    		cache.set(i, c);
+			    		if(c == -1){
+			    			hasNextDocId = false;
+			    			break;
+			    		}
+			    		else{
+			    			int currDocId = postLs.get(c);
+			    			if(nextDocId == -1){
+			    				nextDocId = currDocId;
+			    				cnt++;
+			    			}
+			    			else{
+			    				if(nextDocId == currDocId){
+			    					cnt++;
+			    				}
+			    				else{
+			    					nextDocId = Math.max(nextDocId, currDocId);
+			    				}
+			    			}
+			    		}
+			    	}
+			    	if(cnt == postLsArr.size()){
+			    		System.out.println("document found " + nextDocId);
+			    		return _documents.get(nextDocId);
+			    	}
+			    	else{
+			    		docid = nextDocId - 1;
+			    	}
+			    }
+			    return null;
+			}
+			else{
+				return null;
+			}
+		}
+		
+		// return a pos such that posLs.get(pos)> docid
+		public int postLsNext(ArrayList<Integer> postLs, int cache, int docid){
+			int last = postLs.size() - 1;
+			if(cache < 0){
+				return -1;
+			}
+			else if(cache > last){
+				return -1;
+			}
+			else if(postLs.get(last) <= docid){
+				return -1;
+			}
+			else if(postLs.get(cache) > docid){
+				return cache;
+			}
+			else{
+				return postLsNext(postLs, cache+1, docid);
+			}
+		}
+		
+		public ArrayList<Integer> buildPostLs(String line){
+			String lineArray[] = line.split(":");
+			ArrayList<Integer> postLs= new ArrayList<Integer>();
+			if(lineArray.length == 2){
+				String word = lineArray[0];
+				String[] docIDList = lineArray[1].split(" ");
+				for(int i = 0; i < docIDList.length; i++){
+					Integer docId = Integer.parseInt(docIDList[i].trim());
+					postLs.add(docId);
+				}
+			}
+			return postLs;
 		}
 
 		// number of documents the term occurs in
