@@ -3,12 +3,16 @@ package edu.nyu.cs.cs2580;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,30 +31,34 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 
 // check if this should implement serializable
-public class IndexerInvertedDoconly extends Indexer {
-	final int BULK_DOC_PROCESSING_SIZE = 2;
+public class IndexerInvertedDoconly extends Indexer implements Serializable{
+	final int BULK_DOC_PROCESSING_SIZE = 300;
 
 	// Data structure to maintain unique terms with id
-	private Map<String, Integer> _dictionary;
+	private Map<String, Integer> _dictionary = new HashMap<String, Integer>();
 
 	// Data structure to store number of times a term occurs in Document
-	private Map<String,Integer> _documentTermFrequency;
+	// term id --> frequency
+	private ArrayList<Integer> _documentTermFrequency = new ArrayList<Integer>();
+
 	// Data structure to store number of times a term occurs in the complete Corpus
-	private Map<String, Integer> _corpusTermFrequency;
+	// term id --> frequency
+	private ArrayList<Integer> _corpusTermFrequency = new ArrayList<Integer>();
+	
+	private ArrayList<Integer> _termLineNum = new ArrayList<Integer>();
+
 	// Data structure to store unique terms in the document
 	//private Vector<String> _terms = new Vector<String>();
 
 	// Stores all Document in memory.
-	private List<Document> _documents;
-	private Map<Character, Map<String, List<Integer>>> _characterMap;
-
+	private List<Document> _documents = new ArrayList<Document>();
+	private Map<Character, Map<String, List<Integer>>> _characterMap = new HashMap<Character, Map<String, List<Integer>>>();
+	
+	// Provided for serialization
+	public IndexerInvertedDoconly(){ }
 
 	public IndexerInvertedDoconly(Options options) {
 		super(options);
-		_documentTermFrequency = new HashMap<String,Integer>();
-		_corpusTermFrequency = new HashMap<String,Integer>();
-		_documents = new ArrayList<Document>();
-		_characterMap = new HashMap<Character, Map<String, List<Integer>>>();
 		System.out.println("Using Indexer: " + this.getClass().getSimpleName());
 	}
 
@@ -69,7 +77,7 @@ public class IndexerInvertedDoconly extends Indexer {
 				processDocument(dp.title, dp.body);
 
 				if(_numDocs % BULK_DOC_PROCESSING_SIZE == 0){
-					writeFile(_characterMap);
+					writeFile(_characterMap, false);
 					_characterMap.clear();
 					//writeFrequency(_corpusTermFrequency);
 					//_corpusTermFrequency.clear();
@@ -78,20 +86,19 @@ public class IndexerInvertedDoconly extends Indexer {
 
 			// if the documents are  < BULK_DOC_PROCESSING_SIZE
 			if (!_characterMap.isEmpty()) {
-				writeFile(_characterMap);
+				writeFile(_characterMap, false);
 				_characterMap.clear();
 			}
-			if (!_documents.isEmpty()) {
-				// store documents to disk
-				_documents.clear();
-			}
-			if (!_corpusTermFrequency.isEmpty()) {
-				writeFrequency(_corpusTermFrequency);
-				_corpusTermFrequency.clear();
-			}
-
 			mergeAll();
-			_documents.clear();
+
+			System.out.println("_dictionary size: " + _dictionary.size());
+			String indexFile = _options._indexPrefix + "/corpus.idx";
+			System.out.println("Write Indexer to " + indexFile);
+
+		    ObjectOutputStream writer = new ObjectOutputStream(new FileOutputStream(indexFile));
+		    writer.writeObject(this);
+		    writer.close();
+
 		}
 
 		private void processDocument(String title, String body) {
@@ -106,17 +113,29 @@ public class IndexerInvertedDoconly extends Indexer {
 			// think if we need to store the term vector along with the doc object
 			_documents.add(doc);
 			++ _numDocs;
+
+			//build _dictionary
+			for(String token:uniqueTermSetBody){
+		        if(!_dictionary.containsKey(token)){
+		        	_dictionary.put(token, _corpusTermFrequency.size());
+		        	_corpusTermFrequency.add(0);
+		        	_documentTermFrequency.add(0);
+		        	_termLineNum.add(0);
+		        }
+		        int id = _dictionary.get(token);
+		        _documentTermFrequency.set(id, _documentTermFrequency.get(id) + 1);
+			}
+			
+			Vector<String> bodyTermVector = Utility.tokenize2(body);
+			for(String token : bodyTermVector){
+		        int id = _dictionary.get(token);
+				_corpusTermFrequency.set(id, _corpusTermFrequency.get(id) + 1);
+			}
 		}
 
 		private void buildMapFromTokens(Set<String> uniqueTermSet, int docId){
+
 			for(String token: uniqueTermSet){
-				if(_corpusTermFrequency.containsKey(token)){
-					int value = _corpusTermFrequency.get(token) + 1;
-					_corpusTermFrequency.put(token, value);
-				}
-				else{
-					_corpusTermFrequency.put(token, 1);
-				}
 				// check how to do document frequency here
 				char start = token.charAt(0);
 				if (_characterMap.containsKey(start)) {
@@ -143,7 +162,8 @@ public class IndexerInvertedDoconly extends Indexer {
 			}
 		}
 
-		private void writeFile( Map<Character, Map<String, List<Integer>>> _characterMap) throws IOException{
+		private void writeFile( Map<Character, Map<String, List<Integer>>> _characterMap, Boolean record) throws IOException{
+			int lineNum = 0;
 			for(Entry<Character, Map<String, List<Integer>>> entry : _characterMap.entrySet()){
 				String path = _options._indexPrefix + "/" + entry.getKey() + ".idx";
 				File file = new File(path);
@@ -159,6 +179,16 @@ public class IndexerInvertedDoconly extends Indexer {
 					}
 					writer.write(sb.toString());
 					writer.write("\n");
+					lineNum++;
+					if(record){
+						if(_dictionary.containsKey(wordName)){
+							int id = _dictionary.get(wordName);
+							_termLineNum.set(id, lineNum);
+						}
+						else{
+							System.out.println(wordName + " is not in _dictionary");
+						}
+					}
 				} 
 
 				writer.close();
@@ -199,11 +229,11 @@ public class IndexerInvertedDoconly extends Indexer {
 					String fileName = _options._indexPrefix + "/" + file;
 					File charFile = new File(fileName);
 					charFile.delete();
-					writeFile(charMap);
+					writeFile(charMap, true);
 				}
 			}
 		}
-
+		
 		private Map<Character, Map<String, List<Integer>>> readAll(String fileName) throws FileNotFoundException{
 			String file = _options._indexPrefix + "/" + fileName;
 			Scanner scan = new Scanner(new File(file));
@@ -241,6 +271,25 @@ public class IndexerInvertedDoconly extends Indexer {
 		// This is used when the SearchEngine is called with the serve option
 		@Override
 		public void loadIndex() throws IOException, ClassNotFoundException {
+		    String indexFile = _options._indexPrefix + "/corpus.idx";
+		    System.out.println("Load index from: " + indexFile);
+
+		    ObjectInputStream reader = new ObjectInputStream(new FileInputStream(indexFile));
+		    reader.close();
+
+		    IndexerInvertedDoconly loaded = (IndexerInvertedDoconly) reader.readObject();
+
+		    this._documents = loaded._documents;
+		    this._dictionary = loaded._dictionary;
+		    this._numDocs = _documents.size();
+		    this._corpusTermFrequency = loaded._corpusTermFrequency;
+		    this._documentTermFrequency = loaded._documentTermFrequency;
+		    this._termLineNum = loaded._termLineNum;
+		    for (Integer freq : loaded._corpusTermFrequency) {
+		        this._totalTermFrequency += freq;
+		    }
+		    System.out.println(Integer.toString(_numDocs) + " documents loaded " +
+		        "with " + Long.toString(_totalTermFrequency) + " terms!");
 		}
 
 		@Override

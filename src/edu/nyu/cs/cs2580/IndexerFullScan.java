@@ -89,7 +89,7 @@ class IndexerFullScan extends Indexer implements Serializable {
   }
 
   /**
-   * Process the raw content (i.e., one line in corpus.tsv) corresponding to a
+   * Process the raw content (i.e., one _totalTermFrequencyline in corpus.tsv) corresponding to a
    * document, and constructs the token vectors for both title and body.
    * @param content
    */
