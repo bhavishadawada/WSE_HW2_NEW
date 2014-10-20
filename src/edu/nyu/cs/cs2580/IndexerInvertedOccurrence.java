@@ -7,6 +7,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -24,13 +25,28 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  */
 
 
-public class IndexerInvertedOccurrence extends Indexer {
+public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 
 	// Stores all Document in memory.
-	private Vector<Document> _documents = new Vector<Document>();
-	private Map<Character, Map<String, Map<Integer, List<Integer>>>> _characterMap;
-	final int BULK_DOC_PROCESSING_SIZE = 2;
+	
+	final int BULK_DOC_PROCESSING_SIZE = 3;
 
+	// Data structure to maintain unique terms with id
+	private Map<String, Integer> _dictionary = new HashMap<String, Integer>();
+
+	// Data structure to store number of times a term occurs in Document
+	// term id --> frequency
+	private ArrayList<Integer> _documentTermFrequency = new ArrayList<Integer>();
+
+	// Data structure to store number of times a term occurs in the complete Corpus
+	// term id --> frequency
+	private ArrayList<Integer> _corpusTermFrequency = new ArrayList<Integer>();
+	
+	private ArrayList<Integer> _termLineNum = new ArrayList<Integer>();
+	
+	private List<DocumentIndexed> _documents = new ArrayList<DocumentIndexed>();
+
+	private Map<Character, Map<String, Map<Integer, List<Integer>>>> _characterMap;
 
 
 	public IndexerInvertedOccurrence(Options options) {
@@ -41,65 +57,51 @@ public class IndexerInvertedOccurrence extends Indexer {
 
 	@Override
 	public void constructIndex() throws IOException {
-		//String corpusFile = _options._corpusPrefix;
-		/*DocProcessor dp = new DocProcessor(corpusFile);
-	  while(dp.hasNextDoc()){
-		  dp.nextDoc();
-		  processDocument(dp.title, dp.body);
-	  }*/
-
-		String corpusFile = _options._corpusPrefix + "/testFile.tsv";
+		String corpusFile = _options._corpusPrefix;
 		System.out.println("Construct index from: " + corpusFile);
 
-		BufferedReader reader = new BufferedReader(new FileReader(corpusFile));
-		try {
-			String line = null;
-			while ((line = reader.readLine()) != null) {
-				processDocument(line);
-				if (_numDocs % BULK_DOC_PROCESSING_SIZE == 0) {
-					writeFile(_characterMap);
-					_characterMap.clear();
-					//writeFrequency(_corpusTermFrequency);
-					//_corpusTermFrequency.clear();
-				}
-			}
-			if (!_characterMap.isEmpty()) {
+		//delete everything in index before constructIndex
+		deleteFile();
+		
+		DocProcessor dp = new DocProcessor(_options._corpusPrefix);
+		while (dp.hasNextDoc()) {
+			// The problem is this will include num_views also
+			dp.nextDoc();
+			processDocument(dp.title, dp.body);
+
+			if(_numDocs % BULK_DOC_PROCESSING_SIZE == 0){
 				writeFile(_characterMap);
 				_characterMap.clear();
+				//writeFrequency(_corpusTermFrequency);
+				//_corpusTermFrequency.clear();
 			}
-			if (!_documents.isEmpty()) {
-				// store documents to disk
-				_documents.clear();
-			}
-			/*if (!_corpusTermFrequency.isEmpty()) {
-					writeFrequency(_corpusTermFrequency);
-					_corpusTermFrequency.clear();
-				}*/
+		}
 
-			mergeAll();
-			_documents.clear();
+		if (!_characterMap.isEmpty()) {
+			writeFile(_characterMap);
+			_characterMap.clear();
 		}
-		finally {
-			reader.close();
-		}
+
+		mergeAll();
 	}
 
-	private void processDocument(String content){
+	private void processDocument(String title, String body){
 		//Document doc = new Document(_documents.size());
-		Scanner s = new Scanner(content).useDelimiter("\t");
 		int docId = _numDocs;
-		DocumentIndexed doc = new DocumentIndexed(docId);
-		String title = s.next();	
-		doc.setTitle(title);
-		// check if this works correctly
-		buildMapFromTokens(content, docId);
-		_documents.add(doc);
 		++_numDocs;
+
+		// check if this works correctly
+		buildMapFromTokens(body, docId);
+
 		//System.out.println(title);
+
+		DocumentIndexed doc = new DocumentIndexed(docId);
+		doc.setTitle(title);
+		_documents.add(doc);
 	}
 
 	public void buildMapFromTokens(String content,int docId){
-		String[] tokens = content.toLowerCase().split("\\s+");
+		Vector<String> tokens = Utility.tokenize2(content);
 		int tokenIndex = 0;
 		for (String token : tokens){
 			// improve this if it runs slow. 
@@ -169,6 +171,17 @@ public class IndexerInvertedOccurrence extends Indexer {
 			write.close();
 		}
 	}
+	
+	private void deleteFile(){
+		String path = _options._indexPrefix + "/";
+		File dir = new File(path);
+		File[] fileLs = dir.listFiles();
+		for(File file : fileLs){
+			//if(file.getName().endsWith(".idx")){
+				file.delete();
+			//}
+		}
+	}
 
 	private void mergeAll() throws IOException{
 		List<String> files = Utility.getFilesInDirectory(_options._indexPrefix);
@@ -230,31 +243,183 @@ public class IndexerInvertedOccurrence extends Indexer {
 	}
 
 	@Override
-	public Document getDoc(int docid) {
+	public DocumentIndexed getDoc(int docid) {
 		return null;
 	}
 
 	/**
-	 * In HW2, you should be using {@link DocumentIndexed}.
+	 * In HW2, you should be using {@link DocumentIndexed}
 	 */
+
+	//TODO: This is to be implemented as discussed in class?????
 	@Override
-	public Document nextDoc(Query query, int docid) {
-		return null;
+	public DocumentIndexed nextDoc(Query query, int docid) {
+		ArrayList<ArrayList<Integer>> postLsArr = new ArrayList<ArrayList<Integer>>();
+		ArrayList<Integer> cache = new ArrayList<Integer>();
+
+		query.processQuery();
+		List<String> queryVector = query._tokens;
+		for (String search : queryVector) {
+			if(_dictionary.containsKey(search)){
+
+				int lineNum = _termLineNum.get(_dictionary.get(search));
+				String fileName = _options._indexPrefix + "/"+ search.charAt(0) + ".idx";
+				
+
+				System.out.println("queryTerm " + search);
+				System.out.println("Search in " + fileName);
+				System.out.println("lineNum " + lineNum);
+
+				// build post list
+				BufferedReader br;
+				try {
+					br = new BufferedReader(new FileReader(fileName));
+				    String line = "";
+				    int li = 0;
+				    while(line != null && li < lineNum){
+				    	li++;
+				    	line = br.readLine();
+				    }
+				    if(li == lineNum){
+				    	ArrayList<Integer> postLs = buildPostLs(line);
+				    	postLsArr.add(postLs);
+				    	cache.add(0);
+				    }
+				    else{
+				    	System.out.println("error lineNum: " + li);
+				    	return null;
+				    }
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		if(postLsArr.size() > 0){
+			Boolean hasNextDocId = true;
+		    while(hasNextDocId){
+		    	int nextDocId = -1;
+		    	int cnt = 0;
+		    	for(int i = 0; i < postLsArr.size(); i++){
+		    		int c = cache.get(i);
+		    		ArrayList<Integer> postLs = postLsArr.get(i);
+		    		c = postLsNext(postLs, c, docid);
+		    		cache.set(i, c);
+		    		if(c == -1){
+		    			hasNextDocId = false;
+		    			break;
+		    		}
+		    		else{
+		    			int currDocId = postLs.get(c);
+		    			if(nextDocId == -1){
+		    				nextDocId = currDocId;
+		    				cnt++;
+		    			}
+		    			else{
+		    				if(nextDocId == currDocId){
+		    					cnt++;
+		    				}
+		    				else{
+		    					nextDocId = Math.max(nextDocId, currDocId);
+		    				}
+		    			}
+		    		}
+		    	}
+		    	if(cnt == postLsArr.size()){
+		    		System.out.println("document found " + nextDocId);
+		    		return _documents.get(nextDocId);
+		    	}
+		    	else{
+		    		docid = nextDocId - 1;
+		    	}
+		    }
+		    return null;
+		}
+		else{
+			return null;
+		}
+	}
+	
+	// return a pos such that posLs.get(pos)> docid
+	public int postLsNext(ArrayList<Integer> postLs, int cache, int docid){
+		int last = postLs.size() - 1;
+		if(cache < 0){
+			return -1;
+		}
+		else if(cache > last){
+			return -1;
+		}
+		else if(postLs.get(last) <= docid){
+			return -1;
+		}
+		else if(postLs.get(cache) > docid){
+			return cache;
+		}
+		else{
+			return postLsNext(postLs, cache+1, docid);
+		}
+	}
+	
+	public ArrayList<Integer> buildPostLs(String line){
+		String lineArray[] = line.split(":");
+		ArrayList<Integer> postLs= new ArrayList<Integer>();
+		if(lineArray.length == 2){
+			String word = lineArray[0];
+			String[] docIDList = lineArray[1].split(" ");
+			for(int i = 0; i < docIDList.length; i++){
+				Integer docId = Integer.parseInt(docIDList[i].trim());
+				postLs.add(docId);
+			}
+		}
+		return postLs;
 	}
 
+	// number of documents the term occurs in
 	@Override
 	public int corpusDocFrequencyByTerm(String term) {
-		return 0;
+		return _dictionary.containsKey(term) ?
+				_documentTermFrequency.get(_dictionary.get(term)) : 0;
 	}
 
+	//number of times a term appears in corpus
 	@Override
 	public int corpusTermFrequency(String term) {
-		return 0;
+		return _dictionary.containsKey(term) ?
+				_corpusTermFrequency.get(_dictionary.get(term)) : 0;
+	}
+
+	// number of times a term occurs in document
+	@Override
+	public int documentTermFrequency(String term, String url) {
+		int docid = Integer.parseInt(url);
+		System.out.println("get docid: " + docid);
+		if(_dictionary.containsKey(term)){
+			Query query = new Query(term);
+			DocumentIndexed doc = nextDoc(query, docid-1);
+			if(doc._docid == docid){
+				return 1;
+			}
+			else{
+				return 0;
+			}
+		}
+		else{
+			return 0;
+		}
 	}
 
 	@Override
-	public int documentTermFrequency(String term, String url) {
-		SearchEngine.Check(false, "Not implemented!");
-		return 0;
+	public int documentTotalTermFrequency(String url) {
+		int docid = Integer.parseInt(url);
+		if(docid < _documents.size()){
+			return 1;
+		}
+		else{
+			return 0;
+		}
 	}
 }
