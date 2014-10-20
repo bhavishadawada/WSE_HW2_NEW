@@ -25,10 +25,6 @@ public class Query {
     if (_query == null) {
       return;
     }
-    Scanner s = new Scanner(_query);
-    while (s.hasNext()) {
-      _tokens.add(s.next());
-    }
-    s.close();
+    _tokens = Utility.tokenize2(_query);
   }
 }
