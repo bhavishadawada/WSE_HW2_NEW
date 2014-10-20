@@ -275,7 +275,6 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		    System.out.println("Load index from: " + indexFile);
 
 		    ObjectInputStream reader = new ObjectInputStream(new FileInputStream(indexFile));
-		    reader.close();
 
 		    IndexerInvertedDoconly loaded = (IndexerInvertedDoconly) reader.readObject();
 
@@ -290,6 +289,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		    }
 		    System.out.println(Integer.toString(_numDocs) + " documents loaded " +
 		        "with " + Long.toString(_totalTermFrequency) + " terms!");
+		    reader.close();
 		}
 
 		@Override
@@ -307,8 +307,14 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 			query.processQuery();
 			List<String> queryVector = query._tokens;
 			for (String search : queryVector) {
-				String fileName = _options._indexPrefix + "/"+ search.charAt(0) + ".idx";
-				System.out.println("Search in" + fileName);
+				if(_dictionary.containsKey(search)){
+					int lineNum = _termLineNum.get(_dictionary.get(search));
+					String fileName = _options._indexPrefix + "/"+ search.charAt(0) + ".idx";
+					System.out.println("queryTerm " + search);
+					System.out.println("Search in " + fileName);
+					System.out.println("lineNum " + lineNum);
+					//BufferedReader br = new BufferedReader(new FileReader(fileName));
+				}
 			}
 			return null;
 		}
