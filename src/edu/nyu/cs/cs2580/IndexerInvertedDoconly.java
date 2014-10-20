@@ -307,18 +307,10 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 			query.processQuery();
 			List<String> queryVector = query._tokens;
 			for (String search : queryVector) {
-				String fileName = _options._indexPrefix + "/"
-						+ search.charAt(0) + ".idx";
+				String fileName = _options._indexPrefix + "/"+ search.charAt(0) + ".idx";
 				System.out.println("Search in" + fileName);
-				grepFile(search,
-						fileName);
 			}
 			return null;
-		}
-
-		private void grepFile(String search, String fileName){
-			String cmd = "grep '\\<" + search + "\\>' " + fileName;
-			System.out.println(cmd);
 		}
 
 		// number of documents the term occurs in
