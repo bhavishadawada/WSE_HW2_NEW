@@ -207,28 +207,30 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		while(scan.hasNextLine()){
 			String line = scan.nextLine();
 			String lineArray[] = line.split("::");
-			String word = lineArray[0];
-			Map<Integer, List<Integer>> innerMap = null;
-			if (tempMap.containsKey(word)){
-				innerMap = tempMap.get(word);
-			}
-			else{
-				innerMap = new TreeMap<Integer, List<Integer>>();
-			}
-			String[] docIDList = lineArray[1].split("  ");
+			if(!lineArray[0].equals("")){
+			    String word = lineArray[0];
+			    Map<Integer, List<Integer>> innerMap = null;
+			    if (tempMap.containsKey(word)){
+			    	innerMap = tempMap.get(word);
+			    }
+			    else{
+			    	innerMap = new TreeMap<Integer, List<Integer>>();
+			    }
+			    String[] docIDList = lineArray[1].split("  ");
 			
-			for(String docEntry : docIDList){
-				List<Integer> occurenceList = new ArrayList<Integer>();
-				String[] tempDocIdList = docEntry.split(":");
-				Integer docId = Integer.parseInt(tempDocIdList[0]);
-				String rstr = tempDocIdList[1].replaceAll("[\\[, \\]]", " ");
-				String[] occurence = rstr.trim().split("\\s+");
-				//String[] occurence = tempDocIdList[1].replaceAll("[", " ").split(",");
-				for(int i = 0; i < occurence.length; i++){
-					occurenceList.add(Integer.parseInt(occurence[i]));
-				}		
-				innerMap.put(docId, occurenceList);
-				tempMap.put(word,innerMap);
+			    for(String docEntry : docIDList){
+			    	List<Integer> occurenceList = new ArrayList<Integer>();
+			    	String[] tempDocIdList = docEntry.split(":");
+			    	Integer docId = Integer.parseInt(tempDocIdList[0]);
+			    	String rstr = tempDocIdList[1].replaceAll("[\\[, \\]]", " ");
+			    	String[] occurence = rstr.trim().split("\\s+");
+			    	//String[] occurence = tempDocIdList[1].replaceAll("[", " ").split(",");
+			    	for(int i = 0; i < occurence.length; i++){
+			    		occurenceList.add(Integer.parseInt(occurence[i]));
+			    	}		
+			    	innerMap.put(docId, occurenceList);
+			    	tempMap.put(word,innerMap);
+			    }
 			}
 		}
 		
