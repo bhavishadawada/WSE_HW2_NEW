@@ -1,9 +1,11 @@
 package edu.nyu.cs.cs2580;
 
 import java.io.File;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -118,16 +120,61 @@ public class Utility {
 		return compressList;
 	}
 	
+	private static Integer decompress(Integer num) {
+		String i1 = String.valueOf(num);
+		int counter = 1;
+		String ft = "";
+		for (int x = i1.length() - 1; x >= 0; x--) {
+			if (counter != 8) {
+				ft += i1.charAt(x);
+			} else {
+				counter = 0;
+			}
+			counter++;
+		}
+		String gt = "";
+		for (int x = ft.length() - 1; x >= 0; x--) {
+			gt += ft.charAt(x);
+		}
+		Integer i5 = Integer.parseInt(gt, 2);
+		return i5;
+	}
+	
+	// while reading from file do an integer conversion and pass to this method
+	public static Map<Integer, List<Integer>> createDecompressedMap(
+			List<String> list1) {
+		int size = 0;
+		Map<Integer, List<Integer>> map = new LinkedHashMap<Integer, List<Integer>>();
+		Integer st = 0;
+		Integer lastSt = 0;
+		List<String> list = new ArrayList<String>();
+		for (String b : list1) {
+			String binaryNum = new BigInteger(b , 16).toString(2);
+			list.add(binaryNum);
+		}
+		while (size < list.size()) {
+		
+			// write logic to create the map here
+			
+		}
+		return map;
+	}
+	
 	public static void main(String[] args) {
 		//String doc = "This is to test set to";
 		//tokenize(doc);
-		Map<Integer, List<Integer>> map = new TreeMap<Integer, List<Integer>>();
+		/*Map<Integer, List<Integer>> map = new TreeMap<Integer, List<Integer>>();
 		map.put(1,Arrays.asList(2,4));
 		map.put(2, Arrays.asList(7,18,23));
 		map.put(3, Arrays.asList(2,6));
 		map.put(4, Arrays.asList(3,13));
 		List<String> resultList = createCompressedList(map);
-		System.out.println(resultList);
+		System.out.println(resultList);*/
+		
+		//Integer dcomp  = decompress(81);
+		String num = "011CA0";
+		String bin = new BigInteger(num, 16).toString(2);
+		System.out.println(bin);
 	}
 }
 
