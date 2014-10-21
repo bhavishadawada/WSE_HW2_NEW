@@ -64,6 +64,7 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 				  br = new BufferedReader(new FileReader(file));
 				  String line = br.readLine();
 				  while(line != null){
+					  PostListOccurence postList = _occurIndex.buildPostLs(line);
 					  line = br.readLine();
 				  }
 				  br.close();

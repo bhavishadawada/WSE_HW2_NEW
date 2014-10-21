@@ -337,7 +337,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	    */
 	}
 	
-	private PostListOccurence buildPostLs(String line){
+	public PostListOccurence buildPostLs(String line){
 		String lineArray[] = line.split("::");
 		TreeMap<Integer, List<Integer>> innerMap = new TreeMap<Integer, List<Integer>>();
 		if(!lineArray[0].equals("")){
@@ -441,7 +441,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 				return null;
 			}
 			else{
-				ArrayList<Integer>  postLs =  new ArrayList<Integer>(temp.postList.navigableKeySet());
+				ArrayList<Integer>  postLs =  new ArrayList<Integer>(temp.data.navigableKeySet());
 				postLsArr.add(postLs);
 				cache.add(0);
 			}
@@ -532,7 +532,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		int docid = Integer.parseInt(url);
 		if(get_dictionary().containsKey(term)){
 			PostListOccurence postLs = getPostList(term);
-			return postLs.postList.get(docid).size();
+			return postLs.data.get(docid).size();
 		}
 		else{
 			return 0;
