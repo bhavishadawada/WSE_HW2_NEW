@@ -321,8 +321,8 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	        "with " + Long.toString(_totalTermFrequency) + " terms!");
 	    reader.close();
 	    
-	    /*
 	    System.out.println("dic size: " + _dictionary.size());
+	    /*
 	    Query query = new Query("Alfred Matthew");
 	    Document doc = nextDoc(query, -1);
 	    System.out.println(doc.getTitle());
@@ -367,6 +367,45 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	/**
 	 * In HW2, you should be using {@link DocumentIndexed}
 	 */
+	
+	public TreeMap<Integer, List<Integer>> getPostList(String term){
+		if(_dictionary.containsKey(term)){
+
+			int lineNum = _termLineNum.get(_dictionary.get(term));
+			String fileName = _options._indexPrefix + "/"+ term.charAt(0) + ".idx";
+
+			//System.out.println("queryTerm " + term);
+			//System.out.println("Search in " + fileName);
+			//System.out.println("lineNum " + lineNum);
+
+			
+			// build post list
+			BufferedReader br;
+			try {
+				br = new BufferedReader(new FileReader(fileName));
+			    String line = "";
+			    int li = 0;
+			    while(line != null && li < lineNum){
+			    	li++;
+			    	line = br.readLine();
+			    }
+			    if(li == lineNum){
+			    	return buildPostLs(line);
+			    }
+			    else{
+			    	System.out.println("error lineNum: " + li);
+			    	return null;
+			    }
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return null;
+	}
 
 	//TODO: This is to be implemented as discussed in class?????
 	@Override
@@ -377,42 +416,16 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		query.processQuery();
 		List<String> queryVector = query._tokens;
 		for (String search : queryVector) {
-			if(_dictionary.containsKey(search)){
-
-				int lineNum = _termLineNum.get(_dictionary.get(search));
-				String fileName = _options._indexPrefix + "/"+ search.charAt(0) + ".idx";
-				
-
-				System.out.println("queryTerm " + search);
-				System.out.println("Search in " + fileName);
-				System.out.println("lineNum " + lineNum);
-
-				// build post list
-				BufferedReader br;
-				try {
-					br = new BufferedReader(new FileReader(fileName));
-				    String line = "";
-				    int li = 0;
-				    while(line != null && li < lineNum){
-				    	li++;
-				    	line = br.readLine();
-				    }
-				    if(li == lineNum){
-				    	ArrayList<Integer>  postLs =  new ArrayList<Integer>(buildPostLs(line).navigableKeySet());
-				    	postLsArr.add(postLs);
-				    	cache.add(0);
-				    }
-				    else{
-				    	System.out.println("error lineNum: " + li);
-				    	return null;
-				    }
-				} catch (FileNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+			// build post list
+ 	
+			TreeMap<Integer, List<Integer>> temp = getPostList(search);
+			if(temp == null){
+				return null;
+			}
+			else{
+				ArrayList<Integer>  postLs =  new ArrayList<Integer>(temp.navigableKeySet());
+				postLsArr.add(postLs);
+				cache.add(0);
 			}
 		}
 		
