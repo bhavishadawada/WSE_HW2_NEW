@@ -76,6 +76,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 			while (dp.hasNextDoc()) {
 				// The problem is this will include num_views also
 				dp.nextDoc();
+				System.out.println(dp.title);
 				processDocument(dp.title, dp.body);
 
 				if(_numDocs % BULK_DOC_PROCESSING_SIZE == 0){
@@ -295,11 +296,12 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		        "with " + Long.toString(_totalTermFrequency) + " terms!");
 		    reader.close();
 		    
-		    /* 
-		    Query query = new Query("analyst agarose");
+		    /*
+		    Query query = new Query("Alfred Matthew");
 		    Document doc = nextDoc(query, -1);
 		    System.out.println(doc.getTitle());
 		    doc = nextDoc(query, doc._docid);
+		    System.out.println(doc.getTitle());
 		    */
 		}
 

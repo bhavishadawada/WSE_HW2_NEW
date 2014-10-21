@@ -1,6 +1,12 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Vector;
 
 import edu.nyu.cs.cs2580.SearchEngine.Options;
 
@@ -8,16 +14,17 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
  * @CS2580: Implement this class for HW2.
  */
 public class IndexerInvertedCompressed extends Indexer {
-
+	
   public IndexerInvertedCompressed(Options options) {
     super(options);
     System.out.println("Using Indexer: " + this.getClass().getSimpleName());
   }
 
   @Override
-  public void constructIndex() throws IOException {
-  }
-
+    public void constructIndex() throws IOException {
+    }
+  
+	
   @Override
   public void loadIndex() throws IOException, ClassNotFoundException {
   }
@@ -51,5 +58,11 @@ public class IndexerInvertedCompressed extends Indexer {
   @Override
   public int documentTermFrequency(String term, String url) {
     return 0;
+  }
+
+  @Override
+  public int documentTotalTermFrequency(String url) {
+  	// TODO Auto-generated method stub
+  	return 0;
   }
 }

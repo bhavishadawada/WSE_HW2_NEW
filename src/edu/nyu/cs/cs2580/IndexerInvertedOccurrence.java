@@ -3,16 +3,20 @@ package edu.nyu.cs.cs2580;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.TreeMap;
@@ -28,7 +32,8 @@ import edu.nyu.cs.cs2580.SearchEngine.Options;
 public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 
 	// Stores all Document in memory.
-	
+	private static final long serialVersionUID = -3852089003709472813L;
+
 	final int BULK_DOC_PROCESSING_SIZE = 300;
 
 	// Data structure to maintain unique terms with id
@@ -46,8 +51,11 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	
 	private List<DocumentIndexed> _documents = new ArrayList<DocumentIndexed>();
 
-	private Map<Character, Map<String, Map<Integer, List<Integer>>>> _characterMap;
+	private Map<Character, Map<String, Map<Integer, List<Integer>>>> _characterMap = 
+			new HashMap<Character, Map<String, Map<Integer, List<Integer>>>>();
 
+	// Provided for serialization
+	public IndexerInvertedOccurrence(){ }
 
 	public IndexerInvertedOccurrence(Options options) {
 		super(options);
@@ -70,7 +78,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 			processDocument(dp.title, dp.body);
 
 			if(_numDocs % BULK_DOC_PROCESSING_SIZE == 0){
-				writeFile(_characterMap);
+				writeFile(_characterMap, false);
 				_characterMap.clear();
 				//writeFrequency(_corpusTermFrequency);
 				//_corpusTermFrequency.clear();
@@ -78,30 +86,61 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		}
 
 		if (!_characterMap.isEmpty()) {
-			writeFile(_characterMap);
+			writeFile(_characterMap, false);
 			_characterMap.clear();
 		}
-
 		mergeAll();
+		
+		System.out.println("_dictionary size: " + _dictionary.size());
+		String indexFile = _options._indexPrefix + "/corpus.idx";
+		System.out.println("Write Indexer to " + indexFile);
+
+	    ObjectOutputStream writer = new ObjectOutputStream(new FileOutputStream(indexFile));
+	    writer.writeObject(this);
+	    writer.close();
 	}
 
 	private void processDocument(String title, String body){
 		//Document doc = new Document(_documents.size());
 		int docId = _numDocs;
 		++_numDocs;
-
+		Vector<String> bodyTermVector = Utility.tokenize2(body);
 		// check if this works correctly
-		buildMapFromTokens(body, docId);
+		buildMapFromTokens(bodyTermVector, docId);
+		
+		Set<String> uniqueTermSetBody = Utility.tokenize(body);
 
-		//System.out.println(title);
+		//build _dictionary
+		for(String token:uniqueTermSetBody){
+	        if(!_dictionary.containsKey(token)){
+	        	_dictionary.put(token, _corpusTermFrequency.size());
+	        	_corpusTermFrequency.add(0);
+	        	_documentTermFrequency.add(0);
+	        	_termLineNum.add(0);
+	        }
+	        int id = _dictionary.get(token);
+	        _documentTermFrequency.set(id, _documentTermFrequency.get(id) + 1);
+		}
+		
+		for(String token : bodyTermVector){
+	        if(_dictionary.containsKey(token)){
+	        	int id = _dictionary.get(token);
+				_corpusTermFrequency.set(id, _corpusTermFrequency.get(id) + 1);
+	        }
+	        else{
+	        	System.out.println(token + " is not in _dictionary in processDocument()");
+	        }
+		}
 
 		DocumentIndexed doc = new DocumentIndexed(docId);
 		doc.setTitle(title);
+		doc._termNum = bodyTermVector.size();
+		doc.setUrl(Integer.toString(docId));
+
 		_documents.add(doc);
 	}
 
-	public void buildMapFromTokens(String content,int docId){
-		Vector<String> tokens = Utility.tokenize2(content);
+	public void buildMapFromTokens(Vector<String> tokens,int docId){
 		int tokenIndex = 0;
 		for (String token : tokens){
 			// improve this if it runs slow. 
@@ -144,29 +183,35 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		}
 	}
 
-	private void writeFile(
-			Map<Character, Map<String, Map<Integer, List<Integer>>>> characterMap)
+	private void writeFile(Map<Character, Map<String, Map<Integer, List<Integer>>>> characterMap, Boolean record)
 					throws IOException {
-		for (Entry<Character, Map<String, Map<Integer, List<Integer>>>> entry : characterMap
-				.entrySet()) {
+		int lineNum = 0;
+		for (Entry<Character, Map<String, Map<Integer, List<Integer>>>> entry : characterMap.entrySet()) {
 			String path = _options._indexPrefix + "/" + entry.getKey() + ".idx";
 			File file = new File(path);
-			BufferedWriter write = new BufferedWriter(
-					new FileWriter(file, true));
+			BufferedWriter write = new BufferedWriter(new FileWriter(file, true));
 			Map<String, Map<Integer, List<Integer>>> tempMap = entry.getValue();
-			for (Entry<String, Map<Integer, List<Integer>>> entry1 : tempMap
-					.entrySet()) {
-				String wordName = entry1.getKey() + "::";
+			for (Entry<String, Map<Integer, List<Integer>>> entry1 : tempMap.entrySet()) {
+				String wordName = entry1.getKey();
 				Map<Integer, List<Integer>> innerMostMap = entry1.getValue();
-				write.write(wordName);
+				write.write(wordName + "::");
 				StringBuffer sb = new StringBuffer();
-				for (Entry<Integer, List<Integer>> innerEntry : innerMostMap
-						.entrySet()) {
-					sb.append(innerEntry.getKey()).append(":").append(	innerEntry.getValue()).append("  ");
+				for (Entry<Integer, List<Integer>> innerEntry : innerMostMap.entrySet()) {
+					sb.append(innerEntry.getKey()).append(":").append(innerEntry.getValue()).append("  ");
 				}
 				write.write(sb.toString());
 				write.write("\n");
-
+				lineNum++;
+				if(record){
+					if(_dictionary.containsKey(wordName)){
+						//System.out.println("word: " + wordName + " " + lineNum);
+						int id = _dictionary.get(wordName);
+						_termLineNum.set(id, lineNum);
+					}
+					else{
+						System.out.println(wordName + " is not in _dictionary");
+					}
+				}
 			}
 			write.close();
 		}
@@ -192,7 +237,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 				String fileName = _options._indexPrefix + "/" + file;
 				File charFile = new File(fileName);
 				charFile.delete();
-				writeFile(CharacterMap);
+				writeFile(CharacterMap, true);
 			}
 		}
 	}
@@ -242,7 +287,63 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	}
 	@Override
 	public void loadIndex() throws IOException, ClassNotFoundException {
+	    String indexFile = _options._indexPrefix + "/corpus.idx";
+	    System.out.println("Load index from: " + indexFile);
+
+	    ObjectInputStream reader = new ObjectInputStream(new FileInputStream(indexFile));
+
+	    IndexerInvertedOccurrence loaded = (IndexerInvertedOccurrence) reader.readObject();
+
+	    this._documents = loaded._documents;
+	    this._dictionary = loaded._dictionary;
+	    this._numDocs = _documents.size();
+	    this._corpusTermFrequency = loaded._corpusTermFrequency;
+	    this._documentTermFrequency = loaded._documentTermFrequency;
+	    this._termLineNum = loaded._termLineNum;
+	    for (Integer freq : loaded._corpusTermFrequency) {
+	        this._totalTermFrequency += freq;
+	    }
+	    System.out.println(Integer.toString(_numDocs) + " documents loaded " +
+	        "with " + Long.toString(_totalTermFrequency) + " terms!");
+	    reader.close();
+	    
+	    /*
+	    System.out.println("dic size: " + _dictionary.size());
+	    Query query = new Query("Alfred Matthew");
+	    Document doc = nextDoc(query, -1);
+	    System.out.println(doc.getTitle());
+	    doc = nextDoc(query, doc._docid);
+	    */
 	}
+	
+	private TreeMap<Integer, List<Integer>> buildPostLs(String line){
+		String lineArray[] = line.split("::");
+		TreeMap<Integer, List<Integer>> innerMap = new TreeMap<Integer, List<Integer>>();
+		if(!lineArray[0].equals("")){
+		    String word = lineArray[0];
+
+		    String[] docIDList = lineArray[1].split("  ");
+		
+		    for(String docEntry : docIDList){
+		    	List<Integer> occurenceList = new ArrayList<Integer>();
+		    	String[] tempDocIdList = docEntry.split(":");
+		    	Integer docId = Integer.parseInt(tempDocIdList[0]);
+		    	String rstr = tempDocIdList[1].replaceAll("[\\[, \\]]", " ");
+		    	String[] occurence = rstr.trim().split("\\s+");
+		    	//String[] occurence = tempDocIdList[1].replaceAll("[", " ").split(",");
+		    	for(int i = 0; i < occurence.length; i++){
+		    		occurenceList.add(Integer.parseInt(occurence[i]));
+		    	}		
+		    	innerMap.put(docId, occurenceList);
+		    }
+		    
+		    return innerMap;
+		}
+		else{
+			return null;
+		}
+	}
+
 
 	@Override
 	public DocumentIndexed getDoc(int docid) {
@@ -283,7 +384,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 				    	line = br.readLine();
 				    }
 				    if(li == lineNum){
-				    	ArrayList<Integer> postLs = buildPostLs(line);
+				    	ArrayList<Integer>  postLs =  new ArrayList<Integer>(buildPostLs(line).navigableKeySet());
 				    	postLsArr.add(postLs);
 				    	cache.add(0);
 				    }
@@ -366,20 +467,6 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		}
 	}
 	
-	public ArrayList<Integer> buildPostLs(String line){
-		String lineArray[] = line.split(":");
-		ArrayList<Integer> postLs= new ArrayList<Integer>();
-		if(lineArray.length == 2){
-			String word = lineArray[0];
-			String[] docIDList = lineArray[1].split(" ");
-			for(int i = 0; i < docIDList.length; i++){
-				Integer docId = Integer.parseInt(docIDList[i].trim());
-				postLs.add(docId);
-			}
-		}
-		return postLs;
-	}
-
 	// number of documents the term occurs in
 	@Override
 	public int corpusDocFrequencyByTerm(String term) {

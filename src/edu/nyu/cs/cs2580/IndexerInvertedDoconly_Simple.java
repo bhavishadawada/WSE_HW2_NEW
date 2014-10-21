@@ -284,4 +284,10 @@ public class IndexerInvertedDoconly_Simple extends Indexer {
 			SearchEngine.Check(false, "Not implemented!");
 			return 0;
 		}
+
+		@Override
+		public int documentTotalTermFrequency(String url) {
+			// TODO Auto-generated method stub
+			return 0;
+		}
 	}
