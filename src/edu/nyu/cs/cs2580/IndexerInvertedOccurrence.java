@@ -460,7 +460,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		    		}
 		    	}
 		    	if(cnt == postLsArr.size()){
-		    		System.out.println("document found " + nextDocId);
+		    		//System.out.println("document found " + nextDocId);
 		    		return _documents.get(nextDocId);
 		    	}
 		    	else{
@@ -512,16 +512,9 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	@Override
 	public int documentTermFrequency(String term, String url) {
 		int docid = Integer.parseInt(url);
-		System.out.println("get docid: " + docid);
 		if(_dictionary.containsKey(term)){
-			Query query = new Query(term);
-			DocumentIndexed doc = nextDoc(query, docid-1);
-			if(doc._docid == docid){
-				return 1;
-			}
-			else{
-				return 0;
-			}
+			TreeMap<Integer, List<Integer>> postLs = getPostList(term);
+			return postLs.get(docid).size();
 		}
 		else{
 			return 0;
@@ -532,7 +525,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	public int documentTotalTermFrequency(String url) {
 		int docid = Integer.parseInt(url);
 		if(docid < _documents.size()){
-			return 1;
+			return _documents.get(docid)._termNum;
 		}
 		else{
 			return 0;

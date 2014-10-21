@@ -55,7 +55,6 @@ public class RankerFavorite extends Ranker {
 		// Build query vector
 		
 		System.out.println("title: " + doc.getTitle());
-		System.out.println("url: " + doc.getUrl());
 		Vector < String > qv = query._tokens;
 
 		// Score the document. 
@@ -64,8 +63,9 @@ public class RankerFavorite extends Ranker {
 	    for (int j = 0; j < qv.size(); ++j){
             // pqd: probability of jth term in qv occurs in document did
             // pqc: probability of jth term in qv occurs in collection of all document
-            double pqd = _indexer.documentTermFrequency(qv.get(j), doc.getUrl())/_indexer.documentTotalTermFrequency(doc.getUrl());
-            double pqc = _indexer.corpusTermFrequency(qv.get(j))/_indexer.totalTermFrequency();
+            double pqd = (double)_indexer.documentTermFrequency(qv.get(j), doc.getUrl())/(double)_indexer.documentTotalTermFrequency(doc.getUrl());
+            double pqc = (double)_indexer.corpusTermFrequency(qv.get(j))/(double)_indexer.totalTermFrequency();
+            System.out.println("pqd: " + pqd + " pqc: " + pqc);
             score += Math.log((1-lambda)*pqd + lambda*pqc);
 		}
 
@@ -73,7 +73,7 @@ public class RankerFavorite extends Ranker {
             score = Math.pow(Math.E, score);
         }
 
-		return new ScoredDocument(doc, 1);
+		return new ScoredDocument(doc, score);
 	}
 
 
