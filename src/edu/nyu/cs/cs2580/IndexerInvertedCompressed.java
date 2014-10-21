@@ -79,6 +79,7 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 	  }
   }
   
+  
 	
   @Override
   public void loadIndex() throws IOException, ClassNotFoundException {

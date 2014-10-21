@@ -339,14 +339,14 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	
 	public PostListOccurence buildPostLs(String line){
 		String lineArray[] = line.split("::");
-		TreeMap<Integer, List<Integer>> innerMap = new TreeMap<Integer, List<Integer>>();
+		TreeMap<Integer, ArrayList<Integer>> innerMap = new TreeMap<Integer, ArrayList<Integer>>();
 		if(!lineArray[0].equals("")){
 		    String word = lineArray[0];
 
 		    String[] docIDList = lineArray[1].split("  ");
 		
 		    for(String docEntry : docIDList){
-		    	List<Integer> occurenceList = new ArrayList<Integer>();
+		    	ArrayList<Integer> occurenceList = new ArrayList<Integer>();
 		    	String[] tempDocIdList = docEntry.split(":");
 		    	Integer docId = Integer.parseInt(tempDocIdList[0]);
 		    	String rstr = tempDocIdList[1].replaceAll("[\\[, \\]]", " ");
