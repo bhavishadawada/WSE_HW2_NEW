@@ -240,34 +240,49 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		}
 		
 		private Map<Character, Map<String, List<Integer>>> readAll(String fileName) throws FileNotFoundException{
-			String file = _options._indexPrefix + "/" + fileName;
-			Scanner scan = new Scanner(new File(file));
 			Map<Character, Map<String, List<Integer>>> CharacterMap = new HashMap<Character, Map<String, List<Integer>>>();
 			Map<String, List<Integer>> tempMap = new HashMap<String, List<Integer>>();
-			while(scan.hasNextLine()){
-				String line = scan.nextLine();
-				String lineArray[] = line.split(":");
-				if(lineArray.length == 2){
-					String word = lineArray[0];
-					String[] docIDList = lineArray[1].split(" ");
-					List<Integer> docList = new ArrayList<Integer>();
-					for(int i = 0; i < docIDList.length; i++){
-						Integer docId = Integer.parseInt(docIDList[i].trim());
-						docList.add(docId);	
-					}
-					if(tempMap.containsKey(word)){
-						List<Integer> tempList = tempMap.get(word);
-						tempList.addAll(docList);
-						tempMap.put(word,tempList);
-					}
-					else{
-						tempMap.put(word, docList);
-					}
+
+			String file = _options._indexPrefix + "/" + fileName;
+		    BufferedReader reader = new BufferedReader(new FileReader(file));
+		    try{
+		    	String line = null;
+		    	while ((line = reader.readLine()) != null) {
+		    		String lineArray[] = line.split(":");
+		    		if(lineArray.length == 2){
+		    			String word = lineArray[0];
+		    			String[] docIDList = lineArray[1].split(" ");
+		    			List<Integer> docList = new ArrayList<Integer>();
+		    			for(int i = 0; i < docIDList.length; i++){
+		    				Integer docId = Integer.parseInt(docIDList[i].trim());
+		    				docList.add(docId);	
+		    			}
+		    			if(tempMap.containsKey(word)){
+		    				List<Integer> tempList = tempMap.get(word);
+		    				tempList.addAll(docList);
+		    				tempMap.put(word,tempList);
+		    			}
+		    			else{
+		    				tempMap.put(word, docList);
+		    			}
+		    		}
+		    	}
+		    } catch (NumberFormatException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} finally{
+		    	try {
+					reader.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
-			}
+		    }
 
 			CharacterMap.put(fileName.charAt(0),tempMap);
-			scan.close();
 			return CharacterMap;
 
 		}

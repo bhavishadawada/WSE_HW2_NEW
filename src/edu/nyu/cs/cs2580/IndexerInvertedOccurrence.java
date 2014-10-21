@@ -243,44 +243,58 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	}
 
 	private Map<Character, Map<String, Map<Integer, List<Integer>>>> readAll(String fileName) throws FileNotFoundException{
-		String file = _options._indexPrefix + "/" + fileName;
-		Scanner scan = new Scanner(new File(file));
 		Map<Character, Map<String, Map<Integer, List<Integer>>>> CharacterMap
 		= new HashMap<Character, Map<String,Map<Integer,List<Integer>>>>();
 		Map<String, Map<Integer, List<Integer>>> tempMap = new HashMap<String, Map<Integer, List<Integer>>>();
-		
-		while(scan.hasNextLine()){
-			String line = scan.nextLine();
-			String lineArray[] = line.split("::");
-			if(!lineArray[0].equals("")){
-			    String word = lineArray[0];
-			    Map<Integer, List<Integer>> innerMap = null;
-			    if (tempMap.containsKey(word)){
-			    	innerMap = tempMap.get(word);
-			    }
-			    else{
-			    	innerMap = new TreeMap<Integer, List<Integer>>();
-			    }
-			    String[] docIDList = lineArray[1].split("  ");
-			
-			    for(String docEntry : docIDList){
-			    	List<Integer> occurenceList = new ArrayList<Integer>();
-			    	String[] tempDocIdList = docEntry.split(":");
-			    	Integer docId = Integer.parseInt(tempDocIdList[0]);
-			    	String rstr = tempDocIdList[1].replaceAll("[\\[, \\]]", " ");
-			    	String[] occurence = rstr.trim().split("\\s+");
-			    	//String[] occurence = tempDocIdList[1].replaceAll("[", " ").split(",");
-			    	for(int i = 0; i < occurence.length; i++){
-			    		occurenceList.add(Integer.parseInt(occurence[i]));
-			    	}		
-			    	innerMap.put(docId, occurenceList);
-			    	tempMap.put(word,innerMap);
-			    }
+
+		String file = _options._indexPrefix + "/" + fileName;
+		BufferedReader reader = new BufferedReader(new FileReader(file));
+		try {
+		      String line = null;
+		      while ((line = reader.readLine()) != null) {
+		    	  String lineArray[] = line.split("::");
+		    	  if(!lineArray[0].equals("")){
+		    		  String word = lineArray[0];
+		    		  Map<Integer, List<Integer>> innerMap = null;
+		    		  if (tempMap.containsKey(word)){
+		    			  innerMap = tempMap.get(word);
+		    		  }
+		    		  else{
+		    			  innerMap = new TreeMap<Integer, List<Integer>>();
+		    		  }
+		    		  String[] docIDList = lineArray[1].split("  ");
+
+		    		  for(String docEntry : docIDList){
+		    			  List<Integer> occurenceList = new ArrayList<Integer>();
+		    			  String[] tempDocIdList = docEntry.split(":");
+		    			  Integer docId = Integer.parseInt(tempDocIdList[0]);
+		    			  String rstr = tempDocIdList[1].replaceAll("[\\[, \\]]", " ");
+		    			  String[] occurence = rstr.trim().split("\\s+");
+		    			  //String[] occurence = tempDocIdList[1].replaceAll("[", " ").split(",");
+		    			  for(int i = 0; i < occurence.length; i++){
+		    				  occurenceList.add(Integer.parseInt(occurence[i]));
+		    			  }		
+		    			  innerMap.put(docId, occurenceList);
+		    			  tempMap.put(word,innerMap);
+		    		  }
+		    	  }
+		      }
+		} catch (NumberFormatException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+		      try {
+				reader.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-		}
+	    }
 		
 		CharacterMap.put(fileName.charAt(0), tempMap);
-		scan.close();
 		return CharacterMap;
 
 
