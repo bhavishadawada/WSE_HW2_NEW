@@ -53,6 +53,13 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 
 	private Map<Character, Map<String, Map<Integer, List<Integer>>>> _characterMap = 
 			new HashMap<Character, Map<String, Map<Integer, List<Integer>>>>();
+	
+	// use buffer of post list to reduce file IO
+	private HashMap<String, TreeMap<Integer, List<Integer>>> _postListBuf = 
+			new HashMap<String, TreeMap<Integer, List<Integer>>>();
+	int _postListBufSize = 1000;
+	
+	
 
 	// Provided for serialization
 	public IndexerInvertedOccurrence(){ }
@@ -369,6 +376,12 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	 */
 	
 	public TreeMap<Integer, List<Integer>> getPostList(String term){
+		if(_postListBuf.size() > _postListBufSize){
+			_postListBuf.clear();
+		}
+		if(_postListBuf.containsKey(term)){
+			return _postListBuf.get(term);
+		}
 		if(_dictionary.containsKey(term)){
 
 			int lineNum = _termLineNum.get(_dictionary.get(term));
@@ -390,7 +403,12 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 			    	line = br.readLine();
 			    }
 			    if(li == lineNum){
-			    	return buildPostLs(line);
+			    	TreeMap<Integer, List<Integer>> postLs = buildPostLs(line);
+
+			    	//buffer the post list to reduce file IO
+			    	_postListBuf.put(term, postLs);
+
+			    	return postLs;
 			    }
 			    else{
 			    	System.out.println("error lineNum: " + li);

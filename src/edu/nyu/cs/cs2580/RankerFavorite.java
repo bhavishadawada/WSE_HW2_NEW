@@ -65,7 +65,7 @@ public class RankerFavorite extends Ranker {
             // pqc: probability of jth term in qv occurs in collection of all document
             double pqd = (double)_indexer.documentTermFrequency(qv.get(j), doc.getUrl())/(double)_indexer.documentTotalTermFrequency(doc.getUrl());
             double pqc = (double)_indexer.corpusTermFrequency(qv.get(j))/(double)_indexer.totalTermFrequency();
-            System.out.println("pqd: " + pqd + " pqc: " + pqc);
+            //System.out.println("pqd: " + pqd + " pqc: " + pqc);
             score += Math.log((1-lambda)*pqd + lambda*pqc);
 		}
 
