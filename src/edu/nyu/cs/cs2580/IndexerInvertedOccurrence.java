@@ -55,8 +55,8 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 			new HashMap<Character, Map<String, Map<Integer, List<Integer>>>>();
 	
 	// use buffer of post list to reduce file IO
-	private HashMap<String, TreeMap<Integer, List<Integer>>> _postListBuf = 
-			new HashMap<String, TreeMap<Integer, List<Integer>>>();
+	private HashMap<String, PostListOccurence> _postListBuf = 
+			new HashMap<String, PostListOccurence>();
 	int _postListBufSize = 1000;
 	
 	
@@ -98,7 +98,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		}
 		mergeAll();
 		
-		System.out.println("_dictionary size: " + _dictionary.size());
+		System.out.println("_dictionary size: " + get_dictionary().size());
 		String indexFile = _options._indexPrefix + "/corpus.idx";
 		System.out.println("Write Indexer to " + indexFile);
 
@@ -119,20 +119,20 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 
 		//build _dictionary
 		for(String token:uniqueTermSetBody){
-	        if(!_dictionary.containsKey(token)){
-	        	_dictionary.put(token, _corpusTermFrequency.size());
-	        	_corpusTermFrequency.add(0);
-	        	_documentTermFrequency.add(0);
+	        if(!get_dictionary().containsKey(token)){
+	        	get_dictionary().put(token, get_corpusTermFrequency().size());
+	        	get_corpusTermFrequency().add(0);
+	        	get_documentTermFrequency().add(0);
 	        	_termLineNum.add(0);
 	        }
-	        int id = _dictionary.get(token);
-	        _documentTermFrequency.set(id, _documentTermFrequency.get(id) + 1);
+	        int id = get_dictionary().get(token);
+	        get_documentTermFrequency().set(id, get_documentTermFrequency().get(id) + 1);
 		}
 		
 		for(String token : bodyTermVector){
-	        if(_dictionary.containsKey(token)){
-	        	int id = _dictionary.get(token);
-				_corpusTermFrequency.set(id, _corpusTermFrequency.get(id) + 1);
+	        if(get_dictionary().containsKey(token)){
+	        	int id = get_dictionary().get(token);
+				get_corpusTermFrequency().set(id, get_corpusTermFrequency().get(id) + 1);
 	        }
 	        else{
 	        	System.out.println(token + " is not in _dictionary in processDocument()");
@@ -144,7 +144,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		doc._termNum = bodyTermVector.size();
 		doc.setUrl(Integer.toString(docId));
 
-		_documents.add(doc);
+		get_documents().add(doc);
 	}
 
 	public void buildMapFromTokens(Vector<String> tokens,int docId){
@@ -210,9 +210,9 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 				write.write("\n");
 				lineNum++;
 				if(record){
-					if(_dictionary.containsKey(wordName)){
+					if(get_dictionary().containsKey(wordName)){
 						//System.out.println("word: " + wordName + " " + lineNum);
-						int id = _dictionary.get(wordName);
+						int id = get_dictionary().get(wordName);
 						_termLineNum.set(id, lineNum);
 					}
 					else{
@@ -315,20 +315,20 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 
 	    IndexerInvertedOccurrence loaded = (IndexerInvertedOccurrence) reader.readObject();
 
-	    this._documents = loaded._documents;
-	    this._dictionary = loaded._dictionary;
-	    this._numDocs = _documents.size();
-	    this._corpusTermFrequency = loaded._corpusTermFrequency;
-	    this._documentTermFrequency = loaded._documentTermFrequency;
+	    this.set_documents(loaded.get_documents());
+	    this.set_dictionary(loaded.get_dictionary());
+	    this._numDocs = get_documents().size();
+	    this.set_corpusTermFrequency(loaded.get_corpusTermFrequency());
+	    this.set_documentTermFrequency(loaded.get_documentTermFrequency());
 	    this._termLineNum = loaded._termLineNum;
-	    for (Integer freq : loaded._corpusTermFrequency) {
+	    for (Integer freq : loaded.get_corpusTermFrequency()) {
 	        this._totalTermFrequency += freq;
 	    }
 	    System.out.println(Integer.toString(_numDocs) + " documents loaded " +
 	        "with " + Long.toString(_totalTermFrequency) + " terms!");
 	    reader.close();
 	    
-	    System.out.println("dic size: " + _dictionary.size());
+	    System.out.println("dic size: " + get_dictionary().size());
 	    /*
 	    Query query = new Query("Alfred Matthew");
 	    Document doc = nextDoc(query, -1);
@@ -337,7 +337,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	    */
 	}
 	
-	private TreeMap<Integer, List<Integer>> buildPostLs(String line){
+	private PostListOccurence buildPostLs(String line){
 		String lineArray[] = line.split("::");
 		TreeMap<Integer, List<Integer>> innerMap = new TreeMap<Integer, List<Integer>>();
 		if(!lineArray[0].equals("")){
@@ -357,8 +357,8 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		    	}		
 		    	innerMap.put(docId, occurenceList);
 		    }
-		    
-		    return innerMap;
+
+		    return new PostListOccurence(word, innerMap);
 		}
 		else{
 			return null;
@@ -375,16 +375,16 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	 * In HW2, you should be using {@link DocumentIndexed}
 	 */
 	
-	public TreeMap<Integer, List<Integer>> getPostList(String term){
+	public PostListOccurence getPostList(String term){
 		if(_postListBuf.size() > _postListBufSize){
 			_postListBuf.clear();
 		}
 		if(_postListBuf.containsKey(term)){
 			return _postListBuf.get(term);
 		}
-		if(_dictionary.containsKey(term)){
+		if(get_dictionary().containsKey(term)){
 
-			int lineNum = _termLineNum.get(_dictionary.get(term));
+			int lineNum = _termLineNum.get(get_dictionary().get(term));
 			String fileName = _options._indexPrefix + "/"+ term.charAt(0) + ".idx";
 
 			//System.out.println("queryTerm " + term);
@@ -403,7 +403,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 			    	line = br.readLine();
 			    }
 			    if(li == lineNum){
-			    	TreeMap<Integer, List<Integer>> postLs = buildPostLs(line);
+			    	PostListOccurence postLs = buildPostLs(line);
 
 			    	//buffer the post list to reduce file IO
 			    	_postListBuf.put(term, postLs);
@@ -436,12 +436,12 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		for (String search : queryVector) {
 			// build post list
  	
-			TreeMap<Integer, List<Integer>> temp = getPostList(search);
+			PostListOccurence temp = getPostList(search);
 			if(temp == null){
 				return null;
 			}
 			else{
-				ArrayList<Integer>  postLs =  new ArrayList<Integer>(temp.navigableKeySet());
+				ArrayList<Integer>  postLs =  new ArrayList<Integer>(temp.postList.navigableKeySet());
 				postLsArr.add(postLs);
 				cache.add(0);
 			}
@@ -479,7 +479,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		    	}
 		    	if(cnt == postLsArr.size()){
 		    		//System.out.println("document found " + nextDocId);
-		    		return _documents.get(nextDocId);
+		    		return get_documents().get(nextDocId);
 		    	}
 		    	else{
 		    		docid = nextDocId - 1;
@@ -515,24 +515,24 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	// number of documents the term occurs in
 	@Override
 	public int corpusDocFrequencyByTerm(String term) {
-		return _dictionary.containsKey(term) ?
-				_documentTermFrequency.get(_dictionary.get(term)) : 0;
+		return get_dictionary().containsKey(term) ?
+				get_documentTermFrequency().get(get_dictionary().get(term)) : 0;
 	}
 
 	//number of times a term appears in corpus
 	@Override
 	public int corpusTermFrequency(String term) {
-		return _dictionary.containsKey(term) ?
-				_corpusTermFrequency.get(_dictionary.get(term)) : 0;
+		return get_dictionary().containsKey(term) ?
+				get_corpusTermFrequency().get(get_dictionary().get(term)) : 0;
 	}
 
 	// number of times a term occurs in document
 	@Override
 	public int documentTermFrequency(String term, String url) {
 		int docid = Integer.parseInt(url);
-		if(_dictionary.containsKey(term)){
-			TreeMap<Integer, List<Integer>> postLs = getPostList(term);
-			return postLs.get(docid).size();
+		if(get_dictionary().containsKey(term)){
+			PostListOccurence postLs = getPostList(term);
+			return postLs.postList.get(docid).size();
 		}
 		else{
 			return 0;
@@ -542,11 +542,43 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	@Override
 	public int documentTotalTermFrequency(String url) {
 		int docid = Integer.parseInt(url);
-		if(docid < _documents.size()){
-			return _documents.get(docid)._termNum;
+		if(docid < get_documents().size()){
+			return get_documents().get(docid)._termNum;
 		}
 		else{
 			return 0;
 		}
+	}
+
+	public Map<String, Integer> get_dictionary() {
+		return _dictionary;
+	}
+
+	public void set_dictionary(Map<String, Integer> _dictionary) {
+		this._dictionary = _dictionary;
+	}
+
+	public ArrayList<Integer> get_documentTermFrequency() {
+		return _documentTermFrequency;
+	}
+
+	public void set_documentTermFrequency(ArrayList<Integer> _documentTermFrequency) {
+		this._documentTermFrequency = _documentTermFrequency;
+	}
+
+	public ArrayList<Integer> get_corpusTermFrequency() {
+		return _corpusTermFrequency;
+	}
+
+	public void set_corpusTermFrequency(ArrayList<Integer> _corpusTermFrequency) {
+		this._corpusTermFrequency = _corpusTermFrequency;
+	}
+
+	public List<DocumentIndexed> get_documents() {
+		return _documents;
+	}
+
+	public void set_documents(List<DocumentIndexed> _documents) {
+		this._documents = _documents;
 	}
 }
