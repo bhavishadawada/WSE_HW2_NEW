@@ -484,7 +484,17 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		    	}
 		    	if(cnt == postLsArr.size()){
 		    		//System.out.println("document found " + nextDocId);
-		    		return get_documents().get(nextDocId);
+		    		//check phrase here
+		    		boolean ret = true;
+		    		for(Vector<String> phrase : query._phraseTokens){
+		    			ret = ret & checkPhrase(phrase, nextDocId);
+		    		}
+		    		if(ret){
+		    			return _documents.get(nextDocId);
+		    		}
+		    		else{
+		    			docid = nextDocId;
+		    		}
 		    	}
 		    	else{
 		    		docid = nextDocId - 1;
@@ -494,6 +504,68 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		}
 		else{
 			return null;
+		}
+	}
+	
+	public boolean checkPhrase(Vector<String> phrase, int docid){
+		ArrayList<ArrayList<Integer>> occurLsArr = new ArrayList<ArrayList<Integer>>();
+		ArrayList<Integer> cache = new ArrayList<Integer>();
+		for(String term : phrase){
+			occurLsArr.add(getPostList(term).data.get(docid));
+			cache.add(0);
+		}
+		Boolean hasNextDocId = true;
+		int pos = -1;
+		while(hasNextDocId){
+			int cnt = 0;
+			for(int i = 0; i < occurLsArr.size(); i++){
+				int c = cache.get(i);
+				ArrayList<Integer> occurLs = occurLsArr.get(i);
+				c = occurNext(occurLs, c, pos);
+				cache.set(i, c);
+				if(c == -1){
+					hasNextDocId = false;
+					break;
+				}
+				else{
+					if(cnt == 0){
+						pos = occurLs.get(c);
+						cnt++;
+					}
+					else{
+						if(pos+1 == occurLs.get(c)){
+							cnt++;
+						}
+						pos = Math.max(pos, occurLs.get(c));
+						//System.out.println("pos: " + pos + "c: " + c);
+					}
+				}
+			}
+			if(cnt == phrase.size()){
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public int occurNext(ArrayList<Integer> occurLs, int cache, int pos){
+		int last = occurLs.size() - 1;
+		if(cache<0){
+			return -1;
+		}
+		else if(occurLs.get(last) <= pos){
+			return -1;
+		}
+
+		while(cache < occurLs.size() && occurLs.get(cache) <= pos){
+			cache++;
+		}
+
+		if(cache == occurLs.size()){
+			return -1;
+		}
+		else{
+			return cache;
 		}
 	}
 	
@@ -509,11 +581,15 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		else if(postLs.get(last) <= docid){
 			return -1;
 		}
-		else if(postLs.get(cache) > docid){
+		while(cache < postLs.size() && postLs.get(cache) <= docid){
+			cache++;
+		}
+
+		if(postLs.get(cache) > docid){
 			return cache;
 		}
 		else{
-			return postLsNext(postLs, cache+1, docid);
+			return -1;
 		}
 	}
 	
