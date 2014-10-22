@@ -80,7 +80,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 			while (dp.hasNextDoc()) {
 				// The problem is this will include num_views also
 				dp.nextDoc();
-				System.out.println(dp.title);
+				//System.out.println(dp.title);
 				processDocument(dp.title, dp.body);
 
 				if(_numDocs % BULK_DOC_PROCESSING_SIZE == 0){
