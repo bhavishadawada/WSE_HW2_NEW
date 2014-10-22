@@ -24,6 +24,7 @@ class DocProcessor{
     public File[] file;
     public Scanner sc;
     public boolean simple;
+	private BufferedReader br;
 
 
     public DocProcessor(String path) throws FileNotFoundException{
@@ -70,7 +71,7 @@ class DocProcessor{
 
                 StringBuilder sb= new StringBuilder();
                 try{
-                    BufferedReader br = new BufferedReader(new FileReader(file[index]));
+                    br = new BufferedReader(new FileReader(file[index]));
                     String line = br.readLine();
                     while(line != null){
                         sb.append(line);
