@@ -3,8 +3,10 @@ package edu.nyu.cs.cs2580;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,7 +36,9 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 	
 	private ArrayList<Integer> _termLineNum = new ArrayList<Integer>();
 	
-	private IndexerInvertedOccurrence _occurIndex = new IndexerInvertedOccurrence();
+	private IndexerInvertedOccurrence _occurIndex;
+	
+	private ArrayList<PostListCompressed> _postListCompressed; 
 
 	// Data structure to store unique terms in the document
 	//private Vector<String> _terms = new Vector<String>();
@@ -42,9 +46,11 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 	// Stores all Document in memory.
 	private List<DocumentIndexed> _documents = new ArrayList<DocumentIndexed>();
 	
+  public IndexerInvertedCompressed() { }
   public IndexerInvertedCompressed(Options options) {
     super(options);
     System.out.println("Using Indexer: " + this.getClass().getSimpleName());
+	_occurIndex = new IndexerInvertedOccurrence(options);
   }
 
   @Override
@@ -54,17 +60,28 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 	  this._documentTermFrequency = _occurIndex.get_documentTermFrequency();
 	  this._corpusTermFrequency = _occurIndex.get_corpusTermFrequency();
 	  this._documents = _occurIndex.get_documents();
+	  this._postListCompressed = new ArrayList<PostListCompressed>(this._dictionary.size());
+
+	  for(int i = 0; i < this._dictionary.size(); i++){
+		  this._postListCompressed.add(new PostListCompressed());
+	  }
 
 	  // compress
 	  List<String> files = Utility.getFilesInDirectory(_options._indexPrefix);
 	  for (String file : files) {
-		  if (file.endsWith(".idx")){
+		  if (file.endsWith(".idx") && !file.equals("corpus.idx")){
+			  String fileName = _options._indexPrefix + "/" + file;
+			  System.out.println("compress " + file);
 			  BufferedReader br;
 			  try {
-				  br = new BufferedReader(new FileReader(file));
+				  br = new BufferedReader(new FileReader(fileName));
 				  String line = br.readLine();
 				  while(line != null){
 					  PostListOccurence postList = _occurIndex.buildPostLs(line);
+					  if(_dictionary.containsKey(postList.term)){
+						  int termId = _dictionary.get(postList.term);
+						  _postListCompressed.set(termId,  new PostListCompressed(postList));
+					  }
 					  line = br.readLine();
 				  }
 				  br.close();
@@ -77,12 +94,21 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 			  }
 		  }
 	  }
+	  
+		System.out.println("_dictionary size: " + _dictionary.size());
+		String indexFile = _options._indexPrefix + "/corpus2.idx";
+		System.out.println("Write Indexer to " + indexFile);
+
+	    ObjectOutputStream writer = new ObjectOutputStream(new FileOutputStream(indexFile));
+	    writer.writeObject(this);
+	    writer.close();
   }
   
   
 	
   @Override
   public void loadIndex() throws IOException, ClassNotFoundException {
+
   }
 
   @Override
