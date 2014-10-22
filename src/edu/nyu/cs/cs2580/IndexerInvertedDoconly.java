@@ -336,7 +336,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 
 		//TODO: This is to be implemented as discussed in class?????
 		@Override
-		public DocumentIndexed nextDoc(Query query, int docid) {
+		public DocumentIndexed nextDoc(QueryPhrase query, int docid) {
 			ArrayList<ArrayList<Integer>> postLsArr = new ArrayList<ArrayList<Integer>>();
 			ArrayList<Integer> cache = new ArrayList<Integer>();
 
@@ -481,7 +481,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 			int docid = Integer.parseInt(url);
 			System.out.println("get docid: " + docid);
 			if(_dictionary.containsKey(term)){
-				Query query = new Query(term);
+				QueryPhrase query = new QueryPhrase(term);
 				DocumentIndexed doc = nextDoc(query, docid-1);
 				if(doc._docid == docid){
 					return 1;

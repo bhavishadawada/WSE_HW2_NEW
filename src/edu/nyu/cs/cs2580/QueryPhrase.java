@@ -20,21 +20,20 @@ public class QueryPhrase extends Query {
 	  String[] phrases = _query.split("\"");
 	  _tokens = new Vector<String>();
 	  for(int i = 0; i < phrases.length; i++){
-		  if(i%2 == 0){
-			  //non phrase
-			  _tokens.addAll(Utility.tokenize2(phrases[i]));
-		  }
-		  else{
+		  Vector<String> tokenLs = Utility.tokenize2(phrases[i]);
+		  if(i%2 == 1){
 			  //phrase
-			  _phraseTokens.add(Utility.tokenize2(phrases[i]));
+			  _phraseTokens.add(tokenLs);
 		  }
+			  //non phrase
+		  _tokens.addAll(tokenLs);
 	  }
 	  //System.out.println(_tokens);
 	  //System.out.println(_phraseTokens);
   }
   
   public static void main(String[] args){
-	  QueryPhrase q = new QueryPhrase("I would \"surely\" like to \"go to school\".haha");
+	  QueryPhrase q = new QueryPhrase("\"I would \"surely\" like to \"go to school\".haha");
 	  q.processQuery();
   }
 }

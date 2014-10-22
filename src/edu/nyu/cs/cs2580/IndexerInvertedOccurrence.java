@@ -432,11 +432,11 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 
 	//TODO: This is to be implemented as discussed in class?????
 	@Override
-	public DocumentIndexed nextDoc(Query query, int docid) {
+	public DocumentIndexed nextDoc(QueryPhrase query, int docid) {
 		ArrayList<ArrayList<Integer>> postLsArr = new ArrayList<ArrayList<Integer>>();
 		ArrayList<Integer> cache = new ArrayList<Integer>();
 
-		query.processQuery();
+		//query.processQuery();
 		List<String> queryVector = query._tokens;
 		for (String search : queryVector) {
 			// build post list

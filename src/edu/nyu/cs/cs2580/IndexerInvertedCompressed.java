@@ -48,6 +48,11 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 	// Stores all Document in memory.
 	private List<DocumentIndexed> _documents = new ArrayList<DocumentIndexed>();
 	
+	// use buffer of post list to reduce file IO
+	private HashMap<String, PostListOccurence> _postListBuf = 
+			new HashMap<String, PostListOccurence>();
+	int _postListBufSize = 1000;
+	
   public IndexerInvertedCompressed() { }
   public IndexerInvertedCompressed(Options options) {
     super(options);
@@ -151,9 +156,17 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 	  }
   }
 	public PostListOccurence getPostList(String term){
+		if(_postListBuf.size() > _postListBufSize){
+			_postListBuf.clear();
+		}
+		if(_postListBuf.containsKey(term)){
+			return _postListBuf.get(term);
+		}
 		if(_dictionary.containsKey(term)){
 			int termId = _dictionary.get(term);
-			return _postListCompressed.get(termId).deCompress();
+			PostListOccurence postList = _postListCompressed.get(termId).deCompress();
+			_postListBuf.put(term, postList);
+			return postList;
 		}
 		else{
 			return null;
@@ -165,11 +178,12 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
    */
 	//TODO: This is to be implemented as discussed in class?????
 	@Override
-	public DocumentIndexed nextDoc(Query query, int docid) {
+	public DocumentIndexed nextDoc(QueryPhrase query, int docid) {
 		ArrayList<ArrayList<Integer>> postLsArr = new ArrayList<ArrayList<Integer>>();
 		ArrayList<Integer> cache = new ArrayList<Integer>();
 
-		query.processQuery();
+		//query.processQuery();
+
 		List<String> queryVector = query._tokens;
 		for (String search : queryVector) {
 			// build post list
@@ -217,7 +231,19 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 		    	}
 		    	if(cnt == postLsArr.size()){
 		    		//System.out.println("document found " + nextDocId);
-		    		return _documents.get(nextDocId);
+		    		//check phrase here
+		    		boolean ret = true;
+		    			System.out.println(nextDocId);
+		    		for(Vector<String> phrase : query._phraseTokens){
+		    			System.out.println(phrase);
+		    			ret = ret & checkPhrase(phrase, nextDocId);
+		    		}
+		    		if(ret){
+		    			return _documents.get(nextDocId);
+		    		}
+		    		else{
+		    			docid = nextDocId;
+		    		}
 		    	}
 		    	else{
 		    		docid = nextDocId - 1;
@@ -227,6 +253,68 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 		}
 		else{
 			return null;
+		}
+	}
+	
+	public boolean checkPhrase(Vector<String> phrase, int docid){
+		ArrayList<ArrayList<Integer>> occurLsArr = new ArrayList<ArrayList<Integer>>();
+		ArrayList<Integer> cache = new ArrayList<Integer>();
+		for(String term : phrase){
+			occurLsArr.add(getPostList(term).data.get(docid));
+			cache.add(0);
+		}
+		Boolean hasNextDocId = true;
+		int pos = -1;
+		while(hasNextDocId){
+			int cnt = 0;
+			for(int i = 0; i < occurLsArr.size(); i++){
+				int c = cache.get(i);
+				ArrayList<Integer> occurLs = occurLsArr.get(i);
+				c = occurNext(occurLs, c, pos);
+				cache.set(i, c);
+				if(c == -1){
+					hasNextDocId = false;
+					break;
+				}
+				else{
+					if(cnt == 0){
+						pos = occurLs.get(c);
+						cnt++;
+					}
+					else{
+						if(pos+1 == occurLs.get(c)){
+							cnt++;
+						}
+						pos = Math.max(pos, occurLs.get(c));
+						//System.out.println("pos: " + pos + "c: " + c);
+					}
+				}
+			}
+			if(cnt == phrase.size()){
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public int occurNext(ArrayList<Integer> occurLs, int cache, int pos){
+		int last = occurLs.size() - 1;
+		if(cache<0){
+			return -1;
+		}
+		else if(occurLs.get(last) <= pos){
+			return -1;
+		}
+
+		while(cache < occurLs.size() && occurLs.get(cache) <= pos){
+			cache++;
+		}
+
+		if(cache == occurLs.size()){
+			return -1;
+		}
+		else{
+			return cache;
 		}
 	}
 	

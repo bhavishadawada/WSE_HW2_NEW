@@ -27,7 +27,7 @@ public class RankerFavorite extends Ranker {
     }
 
     @Override
-    public Vector<ScoredDocument> runQuery(Query query, int numResults) {
+    public Vector<ScoredDocument> runQuery(QueryPhrase query, int numResults) {
     	Queue<ScoredDocument> rankQueue = new PriorityQueue<ScoredDocument>();
 
 		int docid = -1;
