@@ -142,26 +142,122 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
   }
 
   @Override
-  public Document getDoc(int docid) {
-    return null;
+  public DocumentIndexed getDoc(int docid) {
+	  if(docid < _documents.size()){
+		  return _documents.get(docid);
+	  }
+	  else{
+		  return null;
+	  }
   }
+	public PostListOccurence getPostList(String term){
+		if(_dictionary.containsKey(term)){
+			int termId = _dictionary.get(term);
+			return _postListCompressed.get(termId).deCompress();
+		}
+		else{
+			return null;
+		}
+	}
 
   /**
    * In HW2, you should be using {@link DocumentIndexed}
    */
-  @Override
-  public Document nextDoc(Query query, int docid) {
-    return null;
-  }
+	//TODO: This is to be implemented as discussed in class?????
+	@Override
+	public DocumentIndexed nextDoc(Query query, int docid) {
+		ArrayList<ArrayList<Integer>> postLsArr = new ArrayList<ArrayList<Integer>>();
+		ArrayList<Integer> cache = new ArrayList<Integer>();
+
+		query.processQuery();
+		List<String> queryVector = query._tokens;
+		for (String search : queryVector) {
+			// build post list
+ 	
+			PostListOccurence temp = getPostList(search);
+			if(temp == null){
+				return null;
+			}
+			else{
+				ArrayList<Integer>  postLs =  new ArrayList<Integer>(temp.data.navigableKeySet());
+				postLsArr.add(postLs);
+				cache.add(0);
+			}
+		}
+		
+		if(postLsArr.size() > 0){
+			Boolean hasNextDocId = true;
+		    while(hasNextDocId){
+		    	int nextDocId = -1;
+		    	int cnt = 0;
+		    	for(int i = 0; i < postLsArr.size(); i++){
+		    		int c = cache.get(i);
+		    		ArrayList<Integer> postLs = postLsArr.get(i);
+		    		c = postLsNext(postLs, c, docid);
+		    		cache.set(i, c);
+		    		if(c == -1){
+		    			hasNextDocId = false;
+		    			break;
+		    		}
+		    		else{
+		    			int currDocId = postLs.get(c);
+		    			if(nextDocId == -1){
+		    				nextDocId = currDocId;
+		    				cnt++;
+		    			}
+		    			else{
+		    				if(nextDocId == currDocId){
+		    					cnt++;
+		    				}
+		    				else{
+		    					nextDocId = Math.max(nextDocId, currDocId);
+		    				}
+		    			}
+		    		}
+		    	}
+		    	if(cnt == postLsArr.size()){
+		    		//System.out.println("document found " + nextDocId);
+		    		return _documents.get(nextDocId);
+		    	}
+		    	else{
+		    		docid = nextDocId - 1;
+		    	}
+		    }
+		    return null;
+		}
+		else{
+			return null;
+		}
+	}
+	
+	// return a pos such that posLs.get(pos)> docid
+	public int postLsNext(ArrayList<Integer> postLs, int cache, int docid){
+		int last = postLs.size() - 1;
+		if(cache < 0){
+			return -1;
+		}
+		else if(cache > last){
+			return -1;
+		}
+		else if(postLs.get(last) <= docid){
+			return -1;
+		}
+		else if(postLs.get(cache) > docid){
+			return cache;
+		}
+		else{
+			return postLsNext(postLs, cache+1, docid);
+		}
+	}
 
   @Override
   public int corpusDocFrequencyByTerm(String term) {
-    return 0;
+    return _dictionary.containsKey(term) ? _documentTermFrequency.get(_dictionary.get(term)): 0;
   }
 
   @Override
   public int corpusTermFrequency(String term) {
-    return 0;
+    return _dictionary.containsKey(term) ? _corpusTermFrequency.get(_dictionary.get(term)): 0;
   }
 
   /**
@@ -169,12 +265,24 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
    */
   @Override
   public int documentTermFrequency(String term, String url) {
-    return 0;
+	int docid = Integer.parseInt(url);
+	if(_dictionary.containsKey(term) && docid < _documents.size()){
+		PostListOccurence postLs = getPostList(term);
+		return postLs.data.get(docid).size();
+	}
+	else{
+		return 0;
+	}
   }
 
   @Override
-  public int documentTotalTermFrequency(String url) {
-  	// TODO Auto-generated method stub
-  	return 0;
-  }
+	public int documentTotalTermFrequency(String url) {
+		int docid = Integer.parseInt(url);
+		if(docid < _documents.size()){
+			return _documents.get(docid)._termNum;
+		}
+		else{
+			return 0;
+		}
+	}
 }
