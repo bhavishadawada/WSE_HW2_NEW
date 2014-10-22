@@ -2,10 +2,12 @@ package edu.nyu.cs.cs2580;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -108,7 +110,35 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 	
   @Override
   public void loadIndex() throws IOException, ClassNotFoundException {
+	    String indexFile = _options._indexPrefix + "/corpus2.idx";
+	    System.out.println("Load index from: " + indexFile);
 
+	    ObjectInputStream reader = new ObjectInputStream(new FileInputStream(indexFile));
+
+	    IndexerInvertedCompressed loaded = (IndexerInvertedCompressed) reader.readObject();
+
+	    this._documents = loaded._documents;
+	    this._dictionary = loaded._dictionary;
+	    this._numDocs = this._documents.size();
+	    this._corpusTermFrequency = loaded._corpusTermFrequency;
+	    this._documentTermFrequency = loaded._documentTermFrequency;
+	    for (Integer freq : loaded._corpusTermFrequency) {
+	        this._totalTermFrequency += freq;
+	    }
+	    
+	    this._postListCompressed = loaded._postListCompressed;
+	    
+	    System.out.println(Integer.toString(_numDocs) + " documents loaded " +
+	        "with " + Long.toString(_totalTermFrequency) + " terms!");
+	    reader.close();
+	    
+	    System.out.println("dic size: " + _dictionary.size());
+	    
+	    /*
+	    String term = "advises";
+	    int termId = _dictionary.get(term);
+	    System.out.println(_postListCompressed.get(termId).deCompress());
+	    */
   }
 
   @Override
