@@ -103,7 +103,11 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 	  }
 	  
 		System.out.println("_dictionary size: " + _dictionary.size());
-		String indexFile = _options._indexPrefix + "/corpus2.idx";
+		String indexFile = _options._indexPrefix + "/corpus.idx";
+
+		File file = new File(indexFile);
+		file.delete();
+
 		System.out.println("Write Indexer to " + indexFile);
 
 	    ObjectOutputStream writer = new ObjectOutputStream(new FileOutputStream(indexFile));
@@ -111,11 +115,10 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 	    writer.close();
   }
   
-  
 	
   @Override
   public void loadIndex() throws IOException, ClassNotFoundException {
-	    String indexFile = _options._indexPrefix + "/corpus2.idx";
+	    String indexFile = _options._indexPrefix + "/corpus.idx";
 	    System.out.println("Load index from: " + indexFile);
 
 	    ObjectInputStream reader = new ObjectInputStream(new FileInputStream(indexFile));
