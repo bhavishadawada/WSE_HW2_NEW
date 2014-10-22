@@ -54,7 +54,7 @@ public class RankerFavorite extends Ranker {
 		// you will be implementing score fuctions here - Q1 
 		// Build query vector
 		
-		System.out.println("title: " + doc.getTitle());
+		//System.out.println("title: " + doc.getTitle());
 		Vector < String > qv = query._tokens;
 
 		// Score the document. 
