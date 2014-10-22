@@ -233,9 +233,7 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 		    		//System.out.println("document found " + nextDocId);
 		    		//check phrase here
 		    		boolean ret = true;
-		    			System.out.println(nextDocId);
 		    		for(Vector<String> phrase : query._phraseTokens){
-		    			System.out.println(phrase);
 		    			ret = ret & checkPhrase(phrase, nextDocId);
 		    		}
 		    		if(ret){
@@ -330,11 +328,15 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 		else if(postLs.get(last) <= docid){
 			return -1;
 		}
-		else if(postLs.get(cache) > docid){
+		while(cache < postLs.size() && postLs.get(cache) <= docid){
+			cache++;
+		}
+
+		if(postLs.get(cache) > docid){
 			return cache;
 		}
 		else{
-			return postLsNext(postLs, cache+1, docid);
+			return -1;
 		}
 	}
 
