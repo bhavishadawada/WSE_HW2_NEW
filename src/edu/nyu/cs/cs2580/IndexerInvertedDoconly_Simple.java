@@ -246,7 +246,7 @@ public class IndexerInvertedDoconly_Simple extends Indexer {
 
 		//TODO: This is to be implemented as discussed in class?????
 		@Override
-		public Document nextDoc(Query query, int docid) {
+		public Document nextDoc(QueryPhrase query, int docid) {
 			query.processQuery();
 			List<String> queryVector = query._tokens;
 			for (String search : queryVector) {

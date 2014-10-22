@@ -54,7 +54,12 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 
 	// Stores all Document in memory.
 	private List<DocumentIndexed> _documents = new ArrayList<DocumentIndexed>();
-	private Map<Character, Map<String, List<Integer>>> _characterMap = new HashMap<Character, Map<String, List<Integer>>>();
+	private Map<Character, Map<String, List<Integer>>> _characterMap = 
+			new HashMap<Character, Map<String, List<Integer>>>();
+	
+	private HashMap<String, ArrayList<Integer>> _postListBuf = 
+			new HashMap<String, ArrayList<Integer>>();
+	int _postListBufSize = 1000;
 	
 	// Provided for serialization
 	public IndexerInvertedDoconly(){ }
@@ -340,46 +345,15 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 			ArrayList<ArrayList<Integer>> postLsArr = new ArrayList<ArrayList<Integer>>();
 			ArrayList<Integer> cache = new ArrayList<Integer>();
 
-			query.processQuery();
+			//query.processQuery();
 			List<String> queryVector = query._tokens;
 			for (String search : queryVector) {
-				if(_dictionary.containsKey(search)){
-
-					int lineNum = _termLineNum.get(_dictionary.get(search));
-					String fileName = _options._indexPrefix + "/"+ search.charAt(0) + ".idx";
-					
-
-					System.out.println("queryTerm " + search);
-					System.out.println("Search in " + fileName);
-					System.out.println("lineNum " + lineNum);
-
-					// build post list
-					BufferedReader br;
-					try {
-						br = new BufferedReader(new FileReader(fileName));
-					    String line = "";
-					    int li = 0;
-					    while(line != null && li < lineNum){
-					    	li++;
-					    	line = br.readLine();
-					    }
-					    if(li == lineNum){
-					    	ArrayList<Integer> postLs = buildPostLs(line);
-					    	postLsArr.add(postLs);
-					    	cache.add(0);
-					    }
-					    else{
-					    	System.out.println("error lineNum: " + li);
-					    	return null;
-					    }
-					} catch (FileNotFoundException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+				ArrayList<Integer> postLs = getPostList(search);
+				if(postLs == null){
+					return null;
 				}
+				postLsArr.add(postLs);
+				cache.add(0);
 			}
 			
 			if(postLsArr.size() > 0){
@@ -439,12 +413,66 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 			else if(postLs.get(last) <= docid){
 				return -1;
 			}
-			else if(postLs.get(cache) > docid){
+			while(cache < postLs.size() && postLs.get(cache) <= docid){
+				cache++;
+			}
+
+			if(postLs.get(cache) > docid){
 				return cache;
 			}
 			else{
-				return postLsNext(postLs, cache+1, docid);
+				return -1;
 			}
+		}
+	
+		public ArrayList<Integer> getPostList(String term){
+			if(_postListBuf.size() > _postListBufSize){
+				_postListBuf.clear();
+			}
+			if(_postListBuf.containsKey(term)){
+				return _postListBuf.get(term);
+			}
+			if(_dictionary.containsKey(term)){
+
+				int lineNum = _termLineNum.get(_dictionary.get(term));
+				String fileName = _options._indexPrefix + "/"+ term.charAt(0) + ".idx";
+				
+
+				System.out.println("queryTerm " + term);
+				System.out.println("Search in " + fileName);
+				System.out.println("lineNum " + lineNum);
+
+				// build post list
+				BufferedReader br;
+				try {
+					br = new BufferedReader(new FileReader(fileName));
+				    String line = "";
+				    int li = 0;
+				    while(line != null && li < lineNum){
+				    	li++;
+				    	line = br.readLine();
+				    }
+				    if(li == lineNum){
+				    	ArrayList<Integer> postLs = buildPostLs(line);
+
+				    	//buffer the post list to reduce file IO
+				    	_postListBuf.put(term, postLs);
+
+				    	return postLs;
+				    }
+				    else{
+				    	System.out.println("error lineNum: " + li);
+				    	return null;
+				    }
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			return null;
 		}
 		
 		public ArrayList<Integer> buildPostLs(String line){
@@ -479,11 +507,12 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		@Override
 		public int documentTermFrequency(String term, String url) {
 			int docid = Integer.parseInt(url);
-			System.out.println("get docid: " + docid);
+			//System.out.println("get docid: " + docid);
 			if(_dictionary.containsKey(term)){
-				QueryPhrase query = new QueryPhrase(term);
-				DocumentIndexed doc = nextDoc(query, docid-1);
-				if(doc._docid == docid){
+				int cache = -1;
+				ArrayList<Integer> postLs = getPostList(term);
+				cache = postLsNext(postLs, cache, docid-1);
+				if(cache >= 0 && postLs.get(cache) == docid){
 					return 1;
 				}
 				else{
