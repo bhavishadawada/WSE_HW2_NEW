@@ -9,6 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.File;
 import java.io.IOException;
+import org.apache.commons.io.FileUtils;
 
 
 
@@ -63,23 +64,13 @@ class DocProcessor{
     	else{
             if(index < file.length){
                 title = file[index].getName();
-
-                StringBuilder sb= new StringBuilder();
-                try{
-                    br = new BufferedReader(new FileReader(file[index]));
-                    String line = br.readLine();
-                    while(line != null){
-                        sb.append(line);
-                        line = br.readLine();
-                    }
-                }
-                catch(IOException e){
-                    e.printStackTrace();
-                }
-
-                body = sb.toString();
-                body = docProcess(body);
-
+                String fileAsString = null;
+				try {
+					fileAsString = FileUtils.readFileToString(file[index]);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+                body = docProcess(fileAsString);
                 index++;
             }
             else{
@@ -87,16 +78,15 @@ class DocProcessor{
                 body = null;
             }
     	}
-    	System.out.println(index);
     }
 
+    // To convert html file to a string 
     static public String docProcess(String input){
-        Document doc = Jsoup.parse(input);
-        String str = doc.text();
+        String docString = Jsoup.parse(input).text();
 
         //Pattern nonASCII = Pattern.compile("[^\\x00-\\x7f]");
         //str = nonASCII.matcher(str).replaceAll();
-        return str;
+        return docString;
     }
     
     static public void main(String[] args){
