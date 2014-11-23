@@ -1,5 +1,6 @@
 package edu.nyu.cs.cs2580;
 
+
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
@@ -24,7 +25,7 @@ import org.apache.lucene.util.Version;
  */
 public class Utility {
 	// This can then help removing stop words
-	public static Set<String> tokenize(String document){
+	/*public static Set<String> tokenize(String document){
 		Set<String> uniqueTermSet = new HashSet<String>();
 		
 		String str;
@@ -39,7 +40,7 @@ public class Utility {
 			}
 		}
 		return uniqueTermSet;
-	}
+	}*/
 
 	/*public static Vector<String> tokenize2(String document){
 		Vector<String> tokenVec = new Vector<String>();
@@ -70,14 +71,48 @@ public class Utility {
 						stemmedToken = Stemmer.getStemmedWord(stemmedToken
 								.toLowerCase());
 						tempTokens.add(stemmedToken);
-						stream.end();
-						stream.close();
 					}
 				}
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			}			
+			}
+			try {
+				stream.end();
+				stream.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			return tempTokens;
+		}
+		
+		public static Set<String> tokenize(String input){
+			Set<String> tempTokens = new HashSet<String>();
+			TokenStream stream = analyze(input);
+			CharTermAttribute cattr = stream.addAttribute(CharTermAttribute.class);
+			try {
+				while (stream.incrementToken()) {
+					String stemmedToken = cattr.toString().trim();
+					if (stemmedToken.matches("[a-zA-Z0-9']*")) {
+						stemmedToken = Stemmer.getStemmedWord(stemmedToken
+								.toLowerCase());
+						tempTokens.add(stemmedToken);
+					}
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			try {
+				stream.end();
+				stream.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 			return tempTokens;
 		}
 		

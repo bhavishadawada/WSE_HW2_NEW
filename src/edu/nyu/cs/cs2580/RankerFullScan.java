@@ -1,5 +1,6 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Vector;
 

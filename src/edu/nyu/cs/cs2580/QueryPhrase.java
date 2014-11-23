@@ -1,5 +1,6 @@
 package edu.nyu.cs.cs2580;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
@@ -17,7 +18,7 @@ public class QueryPhrase extends Query {
   }
 
   @Override
-  public void processQuery() {
+  public void processQuery(){
 	  String[] phrases = _query.split("\"");
 	  _tokens = new ArrayList<String>();
 	  for(int i = 0; i < phrases.length; i++){
@@ -33,7 +34,7 @@ public class QueryPhrase extends Query {
 	  //System.out.println(_phraseTokens);
   }
   
-  public static void main(String[] args){
+  public static void main(String[] args) throws IOException{
 	  QueryPhrase q = new QueryPhrase("\"I would \"surely\" like to \"go to school\".haha");
 	  q.processQuery();
   }
