@@ -59,6 +59,7 @@ class DocProcessor{
 		}
 		else{
 			if(index < file.length){
+                System.out.println(index);
 				title = file[index].getName();
 				body =  Jsoup.parse(FileUtils.readFileToString(file[index])).text();
 				index++;
