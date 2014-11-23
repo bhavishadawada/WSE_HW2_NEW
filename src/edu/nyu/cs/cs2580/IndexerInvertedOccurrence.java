@@ -13,6 +13,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,6 +90,21 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 				//writeFrequency(_corpusTermFrequency);
 				//_corpusTermFrequency.clear();
 			}
+			if (!_characterMap.isEmpty()) {
+				writeFile(_characterMap);
+				_characterMap.clear();
+			}
+			if (!_documents.isEmpty()) {
+				// store documents to disk
+				_documents.clear();
+			}
+			/*if (!_corpusTermFrequency.isEmpty()) {
+					writeFrequency(_corpusTermFrequency);
+					_corpusTermFrequency.clear();
+				}*/
+
+			mergeAll();
+			_documents.clear();
 		}
 
 		if (!_characterMap.isEmpty()) {
@@ -218,6 +234,12 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 				}
 			write.close();
 		}
+		
+		CharacterMap.put(fileName.charAt(0), tempMap);
+		scan.close();
+		return CharacterMap;
+
+
 	}
 	
 	private void deleteFile(){
