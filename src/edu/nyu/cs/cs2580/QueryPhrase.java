@@ -1,6 +1,7 @@
 package edu.nyu.cs.cs2580;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 
 /**
@@ -9,7 +10,7 @@ import java.util.Vector;
  * recorded here and be used in indexing and ranking.
  */
 public class QueryPhrase extends Query {
-  public ArrayList<Vector<String>> _phraseTokens = new ArrayList<Vector<String>>();
+  public ArrayList<ArrayList<String>> _phraseTokens = new ArrayList<ArrayList<String>>();
 
   public QueryPhrase(String query) {
     super(query);
@@ -20,7 +21,7 @@ public class QueryPhrase extends Query {
 	  String[] phrases = _query.split("\"");
 	  _tokens = new Vector<String>();
 	  for(int i = 0; i < phrases.length; i++){
-		  Vector<String> tokenLs = Utility.tokenize2(phrases[i]);
+		  ArrayList<String> tokenLs = (ArrayList<String>) Utility.tokenize2(phrases[i]);
 		  if(i%2 == 1){
 			  //phrase
 			  _phraseTokens.add(tokenLs);

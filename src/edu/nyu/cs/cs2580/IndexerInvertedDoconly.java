@@ -18,9 +18,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Scanner;
 import java.util.Set;
-import java.util.Vector;
+/*import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;*/
 
 import org.apache.commons.io.FileUtils;
 
@@ -58,12 +59,21 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 
 	// Stores all Document in memory.
 	private List<DocumentIndexed> _documents = new ArrayList<DocumentIndexed>();
-	private Map<Character, Map<String, List<Integer>>> _characterMap = 
-			new HashMap<Character, Map<String, List<Integer>>>();
+	private Map<Character, Map<Integer, List<Integer>>> _characterMap = 
+			new HashMap<Character, Map<Integer, List<Integer>>>();
 
 	private HashMap<String, ArrayList<Integer>> _postListBuf = 
 			new HashMap<String, ArrayList<Integer>>();
 	int _postListBufSize = 1000;
+
+	/*// Implementing cache
+	LoadingCache<Integer, List<Integer>> postingListCache = CacheBuilder.newBuilder().maximumSize(1000).build(
+
+			new CacheLoader<Integer, List<Integer>>
+
+
+
+			);*/
 
 	// Provided for serialization
 	public IndexerInvertedDoconly(){ }
@@ -72,6 +82,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		super(options);
 		System.out.println("Using Indexer: " + this.getClass().getSimpleName());
 	}
+
 
 	@Override
 	public void constructIndex() throws IOException {
@@ -117,24 +128,12 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 	private void processDocument(String title, String body) {
 		int docId = _numDocs;
 		++ _numDocs;
-		Set<String> uniqueTermSetTitle = Utility.tokenize(title);
-		buildMapFromTokens(uniqueTermSetTitle,docId);
+		/*Set<String> uniqueTermSetTitle = Utility.tokenize(title);
+		buildMapFromTokens(uniqueTermSetTitle,docId);*/
 		Set<String> uniqueTermSetBody = Utility.tokenize(body);
 		buildMapFromTokens(uniqueTermSetBody,docId);
 
-		//build _dictionary
-		for(String token:uniqueTermSetBody){
-			if(!_dictionary.containsKey(token)){
-				_dictionary.put(token, _corpusTermFrequency.size());
-				_corpusTermFrequency.add(0);
-				_documentTermFrequency.add(0);
-				_termLineNum.add(0);
-			}
-			int id = _dictionary.get(token);
-			_documentTermFrequency.set(id, _documentTermFrequency.get(id) + 1);
-		}
-
-		Vector<String> bodyTermVector = Utility.tokenize2(body);
+		List<String> bodyTermVector = Utility.tokenize2(body);
 		for(String token : bodyTermVector){
 			int id = _dictionary.get(token);
 			_corpusTermFrequency.set(id, _corpusTermFrequency.get(id) + 1);
@@ -151,12 +150,24 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 	private void buildMapFromTokens(Set<String> uniqueTermSet, int docId){
 
 		for(String token: uniqueTermSet){
+
+			// To buid the dictionary
+			if(!_dictionary.containsKey(token)){
+				_dictionary.put(token, _corpusTermFrequency.size());
+				_corpusTermFrequency.add(0);
+				_documentTermFrequency.add(0);
+				_termLineNum.add(0);
+			}
+			int id = _dictionary.get(token);
+			_documentTermFrequency.set(id, _documentTermFrequency.get(id) + 1);
+
 			// check how to do document frequency here
+			Integer tokenId = _dictionary.get(token);
 			char start = token.charAt(0);
 			if (_characterMap.containsKey(start)) {
-				Map<String, List<Integer>> wordMap = _characterMap.get(start);
-				if (wordMap.containsKey(token)) {
-					List<Integer> docList = wordMap.get(token);
+				Map<Integer, List<Integer>> wordMap = _characterMap.get(start);
+				if (wordMap.containsKey(tokenId)) {
+					List<Integer> docList = wordMap.get(tokenId);
 					if(!docList.contains(docId)){
 						docList.add(docId);
 					}
@@ -164,379 +175,377 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 				else{
 					List<Integer> tempDocList = new ArrayList<Integer>();
 					tempDocList.add(docId);
-					wordMap.put(token, tempDocList);
+					wordMap.put(tokenId, tempDocList);
 				}
 			}else{
 				// else for if not characterMap
-				Map<String, List<Integer>> tempMap = new HashMap<String, List<Integer>>();
+				Map<Integer, List<Integer>> tempMap = new HashMap<Integer, List<Integer>>();
 				List<Integer> tempList = new ArrayList<Integer>();
 				tempList.add(docId);
-				tempMap.put(token,tempList);
+				tempMap.put(tokenId,tempList);
 				_characterMap.put(start,tempMap);		
 			}
 		}
 	}
 
-	private void writeFile( Map<Character, Map<String, List<Integer>>> _characterMap, Boolean record) throws IOException{
+	private void writeFile( Map<Character, Map<Integer, List<Integer>>> _characterMap, boolean record) throws IOException{
 		int lineNum = 0;
 		// assign id to file names
-		for(Entry<Character, Map<String, List<Integer>>> entry : _characterMap.entrySet()){
-			String path = _options._indexPrefix + "/" + (int)entry.getKey() + ".idx";
+		for(Entry<Character, Map<Integer, List<Integer>>> entry : _characterMap.entrySet()){
+			String path = _options._indexPrefix + "/" + entry.getKey() + ".idx";
 			System.out.println("The path is" + path);
 			File file = new File(path);
 			FileInputStream fileInput = FileUtils.openInputStream(file);
 			BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
-			Map<String, List<Integer>> docMap = entry.getValue();
-			for(Entry<String, List<Integer>> entry1 : docMap.entrySet()){
-				String wordName = entry1.getKey();
+			Map<Integer, List<Integer>> docMap = entry.getValue();
+			for(Entry<Integer, List<Integer>> entry1 : docMap.entrySet()){
+				Integer wordId = entry1.getKey();
 				List<Integer> docList = entry1.getValue();
-				writer.write(wordName + " ");
+				writer.write(wordId + " ");
 				//StringBuffer sb = new StringBuffer();
 				String tempString = StringUtils.join(docList, " ");
 				writer.write(tempString + "\n");
 				lineNum++;
+				// think about this wordName
 				if(record){
-					if(_dictionary.containsKey(wordName)){
-						int id = _dictionary.get(wordName);
-						_termLineNum.set(id, lineNum);
-					}
-					else{
-						System.out.println(wordName + " is not in _dictionary");
-					}
+					_termLineNum.set(wordId, lineNum);
 				}
-			} 
-
+				else{
+					System.out.println(wordId + " is not in _dictionary");
+				}
+			}
 			writer.close();
-		}
-
+		} 
 	}
 
-	private void deleteFile(){
-		String path = _options._indexPrefix + "/";
-		File dir = new File(path);
-		File[] fileLs = dir.listFiles();
-		for(File file : fileLs){
-			//if(file.getName().endsWith(".idx")){
-			file.delete();
-			//}
+
+
+private void deleteFile(){
+	String path = _options._indexPrefix + "/";
+	File dir = new File(path);
+	File[] fileLs = dir.listFiles();
+	for(File file : fileLs){
+		//if(file.getName().endsWith(".idx")){
+		file.delete();
+		//}
+	}
+}
+
+private void writeFrequency(Map<String, Integer> frequency) throws IOException{
+	String path = _options._indexPrefix + "/" + _numDocs + ".freq";
+	File file = new File(path);
+	OutputStream out = new FileOutputStream(file, true);
+	for (Map.Entry<String, Integer> entry : frequency.entrySet()) {
+		out.write(entry.getKey().getBytes());
+		out.write(" ".getBytes());
+		out.write(entry.getValue().toString().getBytes());
+		out.write("\n".getBytes());
+	}
+	out.close();
+}
+
+private void mergeAll() throws IOException{
+	List<String> files = Utility.getFilesInDirectory(_options._indexPrefix);
+	for (String file : files) {
+		if (file.endsWith(".idx")) {
+			System.out.println("merging files " + file);
+			Map<Character, Map<Integer,List<Integer>>> charMap = readAll(file);
+			String fileName = _options._indexPrefix + "/" + file;
+			File charFile = new File(fileName);
+			charFile.delete();
+			writeFile(charMap, true);
 		}
 	}
+}
 
-	private void writeFrequency(Map<String, Integer> frequency) throws IOException{
-		String path = _options._indexPrefix + "/" + _numDocs + ".freq";
-		File file = new File(path);
-		OutputStream out = new FileOutputStream(file, true);
-		for (Map.Entry<String, Integer> entry : frequency.entrySet()) {
-			out.write(entry.getKey().getBytes());
-			out.write(" ".getBytes());
-			out.write(entry.getValue().toString().getBytes());
-			out.write("\n".getBytes());
-		}
-		out.close();
-	}
+private Map<Character, Map<Integer, List<Integer>>> readAll(String filename) throws FileNotFoundException{
+	Map<Character, Map<Integer, List<Integer>>> CharacterMap = new HashMap<Character, Map<Integer, List<Integer>>>(512);
+	Map<Integer, List<Integer>> tempMap = new HashMap<Integer, List<Integer>>();
 
-	private void mergeAll() throws IOException{
-		List<String> files = Utility.getFilesInDirectory(_options._indexPrefix);
-		for (String file : files) {
-			if (file.endsWith(".idx")) {
-				System.out.println("merging files " + file);
-				Map<Character, Map<String,List<Integer>>> charMap = readAll(file);
-				String fileName = _options._indexPrefix + "/" + file;
-				File charFile = new File(fileName);
-				charFile.delete();
-				writeFile(charMap, true);
-			}
-		}
-	}
-
-	private Map<Character, Map<String, List<Integer>>> readAll(String filename) throws FileNotFoundException{
-		Map<Character, Map<String, List<Integer>>> CharacterMap = new HashMap<Character, Map<String, List<Integer>>>();
-		Map<String, List<Integer>> tempMap = new HashMap<String, List<Integer>>();
-
-		String file = _options._indexPrefix + "/" + filename;
-		BufferedReader reader = new BufferedReader(new FileReader(file));
-		try{
-			String line = null;
-			while ((line = reader.readLine()) != null) {
-				String lineArray[] = line.split(" ");
-				if(lineArray.length == 2){
-					String word = lineArray[0];
-					String[] docIDList = lineArray[1].split(" ");
-					List<Integer> docList = new ArrayList<Integer>();
-					for(int i = 0; i < docIDList.length; i++){
-						Integer docId = Integer.parseInt(docIDList[i].trim());
-						docList.add(docId);	
-					}
-					if(tempMap.containsKey(word)){
-						List<Integer> tempList = tempMap.get(word);
-						tempList.addAll(docList);
-						tempMap.put(word,tempList);
-					}
-					else{
-						tempMap.put(word, docList);
-					}
+	String file = _options._indexPrefix + "/" + filename;
+	BufferedReader reader = new BufferedReader(new FileReader(file));
+	try{
+		String line = null;
+		while ((line = reader.readLine()) != null) {
+			String lineArray[] = line.split(" ");
+			if(lineArray.length == 2){
+				Integer wordId = Integer.parseInt(lineArray[0]);
+				String[] docIDList = lineArray[1].split(" ");
+				List<Integer> docList = new ArrayList<Integer>();
+				for(int i = 0; i < docIDList.length; i++){
+					Integer docId = Integer.parseInt(docIDList[i].trim());
+					docList.add(docId);	
+				}
+				if(tempMap.containsKey(wordId)){
+					List<Integer> tempList = tempMap.get(wordId);
+					tempList.addAll(docList);
+					tempMap.put(wordId,tempList);
+				}
+				else{
+					tempMap.put(wordId, docList);
 				}
 			}
-		} catch (NumberFormatException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		}
+	} catch (NumberFormatException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} finally{
+		try {
+			reader.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} finally{
-			try {
-				reader.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 		}
-
-		CharacterMap.put(filename.charAt(0),tempMap);
-		return CharacterMap;
-
 	}
 
+	CharacterMap.put(filename.charAt(0),tempMap);
+	return CharacterMap;
 
-	// This is used when the SearchEngine is called with the serve option
-	@Override
-	public void loadIndex() throws IOException, ClassNotFoundException {
-		String indexFile = _options._indexPrefix + "/corpus.idx";
-		System.out.println("Load index from: " + indexFile);
+}
 
-		ObjectInputStream reader = new ObjectInputStream(new FileInputStream(indexFile));
 
-		IndexerInvertedDoconly loaded = (IndexerInvertedDoconly) reader.readObject();
+// This is used when the SearchEngine is called with the serve option
+@Override
+public void loadIndex() throws IOException, ClassNotFoundException {
+	String indexFile = _options._indexPrefix + "/corpus.idx";
+	System.out.println("Load index from: " + indexFile);
 
-		this._documents = loaded._documents;
-		this._dictionary = loaded._dictionary;
-		this._numDocs = _documents.size();
-		this._corpusTermFrequency = loaded._corpusTermFrequency;
-		this._documentTermFrequency = loaded._documentTermFrequency;
-		this._termLineNum = loaded._termLineNum;
-		for (Integer freq : loaded._corpusTermFrequency) {
-			this._totalTermFrequency += freq;
-		}
-		System.out.println(Integer.toString(_numDocs) + " documents loaded " +
-				"with " + Long.toString(_totalTermFrequency) + " terms!");
-		reader.close();
+	ObjectInputStream reader = new ObjectInputStream(new FileInputStream(indexFile));
 
-		/*
+	IndexerInvertedDoconly loaded = (IndexerInvertedDoconly) reader.readObject();
+
+	this._documents = loaded._documents;
+	this._dictionary = loaded._dictionary;
+	this._numDocs = _documents.size();
+	this._corpusTermFrequency = loaded._corpusTermFrequency;
+	this._documentTermFrequency = loaded._documentTermFrequency;
+	this._termLineNum = loaded._termLineNum;
+	for (Integer freq : loaded._corpusTermFrequency) {
+		this._totalTermFrequency += freq;
+	}
+	System.out.println(Integer.toString(_numDocs) + " documents loaded " +
+			"with " + Long.toString(_totalTermFrequency) + " terms!");
+	reader.close();
+
+	/*
 		    Query query = new Query("Alfred Matthew");
 		    Document doc = nextDoc(query, -1);
 		    System.out.println(doc.getTitle());
 		    doc = nextDoc(query, doc._docid);
 		    System.out.println(doc.getTitle());
-		 */
-	}
+	 */
+}
 
-	@Override
-	public DocumentIndexed getDoc(int docid) {
-		if(docid < _documents.size()){
-			return _documents.get(docid);
-		}
-		else{
+@Override
+public DocumentIndexed getDoc(int docid) {
+	if(docid < _documents.size()){
+		return _documents.get(docid);
+	}
+	else{
+		return null;
+	}
+}
+
+/**
+ * In HW2, you should be using {@link DocumentIndexed}
+ */
+
+//TODO: This is to be implemented as discussed in class
+@Override
+public DocumentIndexed nextDoc(QueryPhrase query, int docid) {
+	List<ArrayList<Integer>> postLsArr = new ArrayList<ArrayList<Integer>>();
+	ArrayList<Integer> cache = new ArrayList<Integer>();
+
+	//query.processQuery();
+	List<String> queryVector = query._tokens;
+	for (String search : queryVector) {
+		ArrayList<Integer> postLs = getPostList(search);
+		if(postLs == null){
 			return null;
 		}
+		postLsArr.add(postLs);
+		cache.add(0);
 	}
 
-	/**
-	 * In HW2, you should be using {@link DocumentIndexed}
-	 */
-
-	//TODO: This is to be implemented as discussed in class
-	@Override
-	public DocumentIndexed nextDoc(QueryPhrase query, int docid) {
-		List<ArrayList<Integer>> postLsArr = new ArrayList<ArrayList<Integer>>();
-		ArrayList<Integer> cache = new ArrayList<Integer>();
-
-		//query.processQuery();
-		List<String> queryVector = query._tokens;
-		for (String search : queryVector) {
-			ArrayList<Integer> postLs = getPostList(search);
-			if(postLs == null){
-				return null;
-			}
-			postLsArr.add(postLs);
-			cache.add(0);
-		}
-
-		if(postLsArr.size() > 0){
-			Boolean hasNextDocId = true;
-			while(hasNextDocId){
-				int nextDocId = -1;
-				int cnt = 0;
-				for(int i = 0; i < postLsArr.size(); i++){
-					int c = cache.get(i);
-					ArrayList<Integer> postLs = postLsArr.get(i);
-					c = postLsNext(postLs, c, docid);
-					cache.set(i, c);
-					if(c == -1){
-						hasNextDocId = false;
-						break;
+	if(postLsArr.size() > 0){
+		Boolean hasNextDocId = true;
+		while(hasNextDocId){
+			int nextDocId = -1;
+			int cnt = 0;
+			for(int i = 0; i < postLsArr.size(); i++){
+				int c = cache.get(i);
+				ArrayList<Integer> postLs = postLsArr.get(i);
+				c = postLsNext(postLs, c, docid);
+				cache.set(i, c);
+				if(c == -1){
+					hasNextDocId = false;
+					break;
+				}
+				else{
+					int currDocId = postLs.get(c);
+					if(nextDocId == -1){
+						nextDocId = currDocId;
+						cnt++;
 					}
 					else{
-						int currDocId = postLs.get(c);
-						if(nextDocId == -1){
-							nextDocId = currDocId;
+						if(nextDocId == currDocId){
 							cnt++;
 						}
 						else{
-							if(nextDocId == currDocId){
-								cnt++;
-							}
-							else{
-								nextDocId = Math.max(nextDocId, currDocId);
-							}
+							nextDocId = Math.max(nextDocId, currDocId);
 						}
 					}
 				}
-				if(cnt == postLsArr.size()){
-					System.out.println("document found " + nextDocId);
-					return _documents.get(nextDocId);
-				}
-				else{
-					docid = nextDocId - 1;
-				}
 			}
-			return null;
-		}
-		else{
-			return null;
-		}
-	}
-
-	// return a pos such that posLs.get(pos)> docid
-	public int postLsNext(ArrayList<Integer> postLs, int cache, int docid){
-		int last = postLs.size() - 1;
-		if(cache < 0){
-			return -1;
-		}
-		else if(cache > last){
-			return -1;
-		}
-		else if(postLs.get(last) <= docid){
-			return -1;
-		}
-		while(cache < postLs.size() && postLs.get(cache) <= docid){
-			cache++;
-		}
-
-		if(postLs.get(cache) > docid){
-			return cache;
-		}
-		else{
-			return -1;
-		}
-	}
-
-	public ArrayList<Integer> getPostList(String term){
-		if(_postListBuf.size() > _postListBufSize){
-			_postListBuf.clear();
-		}
-		if(_postListBuf.containsKey(term)){
-			return _postListBuf.get(term);
-		}
-		if(_dictionary.containsKey(term)){
-
-			int lineNum = _termLineNum.get(_dictionary.get(term));
-			String fileName = _options._indexPrefix + "/"+ term.charAt(0) + ".idx";
-
-
-			System.out.println("queryTerm " + term);
-			System.out.println("Search in " + fileName);
-			System.out.println("lineNum " + lineNum);
-
-			// build post list
-			BufferedReader br;
-			try {
-				br = new BufferedReader(new FileReader(fileName));
-				String line = "";
-				int li = 0;
-				while(line != null && li < lineNum){
-					li++;
-					line = br.readLine();
-				}
-				if(li == lineNum){
-					ArrayList<Integer> postLs = buildPostLs(line);
-
-					//buffer the post list to reduce file IO
-					_postListBuf.put(term, postLs);
-
-					return postLs;
-				}
-				else{
-					System.out.println("error lineNum: " + li);
-					return null;
-				}
-			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			if(cnt == postLsArr.size()){
+				System.out.println("document found " + nextDocId);
+				return _documents.get(nextDocId);
+			}
+			else{
+				docid = nextDocId - 1;
 			}
 		}
 		return null;
 	}
+	else{
+		return null;
+	}
+}
 
-	public ArrayList<Integer> buildPostLs(String line){
-		String lineArray[] = line.split(":");
-		ArrayList<Integer> postLs= new ArrayList<Integer>();
-		if(lineArray.length == 2){
-			String word = lineArray[0];
-			String[] docIDList = lineArray[1].split(" ");
-			for(int i = 0; i < docIDList.length; i++){
-				Integer docId = Integer.parseInt(docIDList[i].trim());
-				postLs.add(docId);
+// return a pos such that posLs.get(pos)> docid
+public int postLsNext(ArrayList<Integer> postLs, int cache, int docid){
+	int last = postLs.size() - 1;
+	if(cache < 0){
+		return -1;
+	}
+	else if(cache > last){
+		return -1;
+	}
+	else if(postLs.get(last) <= docid){
+		return -1;
+	}
+	while(cache < postLs.size() && postLs.get(cache) <= docid){
+		cache++;
+	}
+
+	if(postLs.get(cache) > docid){
+		return cache;
+	}
+	else{
+		return -1;
+	}
+}
+
+public ArrayList<Integer> getPostList(String term){
+	if(_postListBuf.size() > _postListBufSize){
+		_postListBuf.clear();
+	}
+	if(_postListBuf.containsKey(term)){
+		return _postListBuf.get(term);
+	}
+	if(_dictionary.containsKey(term)){
+
+		int lineNum = _termLineNum.get(_dictionary.get(term));
+		String fileName = _options._indexPrefix + "/"+ term.charAt(0) + ".idx";
+
+
+		System.out.println("queryTerm " + term);
+		System.out.println("Search in " + fileName);
+		System.out.println("lineNum " + lineNum);
+
+		// build post list
+		BufferedReader br;
+		try {
+			br = new BufferedReader(new FileReader(fileName));
+			String line = "";
+			int li = 0;
+			while(line != null && li < lineNum){
+				li++;
+				line = br.readLine();
 			}
-		}
-		return postLs;
-	}
+			if(li == lineNum){
+				ArrayList<Integer> postLs = buildPostLs(line);
 
-	// number of documents the term occurs in
-	@Override
-	public int corpusDocFrequencyByTerm(String term) {
-		return _dictionary.containsKey(term) ?
-				_documentTermFrequency.get(_dictionary.get(term)) : 0;
-	}
+				//buffer the post list to reduce file IO
+				_postListBuf.put(term, postLs);
 
-	//number of times a term appears in corpus
-	@Override
-	public int corpusTermFrequency(String term) {
-		return _dictionary.containsKey(term) ?
-				_corpusTermFrequency.get(_dictionary.get(term)) : 0;
-	}
-
-	// number of times a term occurs in document
-	@Override
-	public int documentTermFrequency(String term, String url) {
-		int docid = Integer.parseInt(url);
-		//System.out.println("get docid: " + docid);
-		if(_dictionary.containsKey(term)){
-			int cache = -1;
-			ArrayList<Integer> postLs = getPostList(term);
-			cache = postLsNext(postLs, cache, docid-1);
-			if(cache >= 0 && postLs.get(cache) == docid){
-				return 1;
+				return postLs;
 			}
 			else{
-				return 0;
+				System.out.println("error lineNum: " + li);
+				return null;
 			}
-		}
-		else{
-			return 0;
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
+	return null;
+}
 
-	@Override
-	public int documentTotalTermFrequency(String url) {
-		int docid = Integer.parseInt(url);
-		if(docid < _documents.size()){
+public ArrayList<Integer> buildPostLs(String line){
+	String lineArray[] = line.split(":");
+	ArrayList<Integer> postLs= new ArrayList<Integer>();
+	if(lineArray.length == 2){
+		String word = lineArray[0];
+		String[] docIDList = lineArray[1].split(" ");
+		for(int i = 0; i < docIDList.length; i++){
+			Integer docId = Integer.parseInt(docIDList[i].trim());
+			postLs.add(docId);
+		}
+	}
+	return postLs;
+}
+
+// number of documents the term occurs in
+@Override
+public int corpusDocFrequencyByTerm(String term) {
+	return _dictionary.containsKey(term) ?
+			_documentTermFrequency.get(_dictionary.get(term)) : 0;
+}
+
+//number of times a term appears in corpus
+@Override
+public int corpusTermFrequency(String term) {
+	return _dictionary.containsKey(term) ?
+			_corpusTermFrequency.get(_dictionary.get(term)) : 0;
+}
+
+// number of times a term occurs in document
+@Override
+public int documentTermFrequency(String term, String url) {
+	int docid = Integer.parseInt(url);
+	//System.out.println("get docid: " + docid);
+	if(_dictionary.containsKey(term)){
+		int cache = -1;
+		ArrayList<Integer> postLs = getPostList(term);
+		cache = postLsNext(postLs, cache, docid-1);
+		if(cache >= 0 && postLs.get(cache) == docid){
 			return 1;
 		}
 		else{
 			return 0;
 		}
 	}
+	else{
+		return 0;
+	}
+}
+
+@Override
+public int documentTotalTermFrequency(String url) {
+	int docid = Integer.parseInt(url);
+	if(docid < _documents.size()){
+		return 1;
+	}
+	else{
+		return 0;
+	}
+}
 }
