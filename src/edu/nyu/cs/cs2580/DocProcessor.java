@@ -65,6 +65,7 @@ class DocProcessor{
 		}
     	else{
             if(index < file.length){
+            	System.out.println(index);
                 title = file[index].getName();
                 String fileAsString = null;
 				try {

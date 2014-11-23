@@ -121,7 +121,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		buildMapFromTokens(uniqueTermSetTitle,docId);
 		Set<String> uniqueTermSetBody = Utility.tokenize(body);
 		buildMapFromTokens(uniqueTermSetBody,docId);
-
+		DocumentIndexed doc = new DocumentIndexed(docId);
 		//build _dictionary
 		for(String token:uniqueTermSetBody){
 			if(!_dictionary.containsKey(token)){
@@ -138,13 +138,20 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		for(String token : bodyTermVector){
 			int id = _dictionary.get(token);
 			_corpusTermFrequency.set(id, _corpusTermFrequency.get(id) + 1);
+			
+			if(doc.termFrequency.containsKey(id)){
+				doc.termFrequency.put(id, doc.termFrequency.get(id) + 1);
+			}
+			else{
+				doc.termFrequency.put(id, 1);
+			}
 		}
 
-		DocumentIndexed doc = new DocumentIndexed(docId);
+		
 		doc.setTitle(title);
 		doc._termNum = bodyTermVector.size();
 		doc.setUrl(Integer.toString(docId));
-
+		
 		_documents.add(doc);
 	}
 

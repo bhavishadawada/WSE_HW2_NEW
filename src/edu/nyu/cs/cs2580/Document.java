@@ -1,6 +1,8 @@
 package edu.nyu.cs.cs2580;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The basic implementation of a Document.  Only the most basic information are
@@ -26,7 +28,9 @@ class Document implements Serializable {
   // Basic information for ranking
   private float _pageRank = 0.0f;
   private int _numViews = 0;
-
+  
+  // HashMap to store frequency for PRF
+  Map<Integer,Integer> termFrequency = new HashMap<Integer, Integer>();
   public Document(int docid) {
     _docid = docid;
   }
