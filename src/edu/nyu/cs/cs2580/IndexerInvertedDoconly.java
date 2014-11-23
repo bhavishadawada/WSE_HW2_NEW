@@ -490,15 +490,11 @@ public ArrayList<Integer> getPostList(String term){
 }
 
 public ArrayList<Integer> buildPostLs(String line){
-	String lineArray[] = line.split(":");
+	String lineArray[] = line.split(" ");
 	ArrayList<Integer> postLs= new ArrayList<Integer>();
-	if(lineArray.length == 2){
-		String word = lineArray[0];
-		String[] docIDList = lineArray[1].split(" ");
-		for(int i = 0; i < docIDList.length; i++){
-			Integer docId = Integer.parseInt(docIDList[i].trim());
-			postLs.add(docId);
-		}
+	for(int i = 1; i < lineArray.length; i++){
+		Integer docId = Integer.parseInt(lineArray[i].trim());
+		postLs.add(docId);
 	}
 	return postLs;
 }
