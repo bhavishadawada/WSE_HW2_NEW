@@ -75,6 +75,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 
 			);*/
 
+
 	// Provided for serialization
 	public IndexerInvertedDoconly(){ }
 
@@ -162,7 +163,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 			_documentTermFrequency.set(id, _documentTermFrequency.get(id) + 1);
 
 			// check how to do document frequency here
-			Integer tokenId = _dictionary.get(token);
+			int tokenId = _dictionary.get(token);
 			char start = token.charAt(0);
 			if (_characterMap.containsKey(start)) {
 				Map<Integer, List<Integer>> wordMap = _characterMap.get(start);
@@ -195,7 +196,6 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 			String path = _options._indexPrefix + "/" + entry.getKey() + ".idx";
 			System.out.println("The path is" + path);
 			File file = new File(path);
-			FileInputStream fileInput = FileUtils.openInputStream(file);
 			BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
 			Map<Integer, List<Integer>> docMap = entry.getValue();
 			for(Entry<Integer, List<Integer>> entry1 : docMap.entrySet()){

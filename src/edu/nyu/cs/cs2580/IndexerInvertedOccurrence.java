@@ -51,8 +51,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	
 	 List<DocumentIndexed> _documents = new ArrayList<DocumentIndexed>();
 
-	private Map<Character, Map<String, Map<Integer, List<Integer>>>> _characterMap = 
-			new HashMap<Character, Map<String, Map<Integer, List<Integer>>>>();
+	private Map<Character, Map<Integer, Map<Integer, List<Integer>>>> _characterMap; 
 	
 	// use buffer of post list to reduce file IO
 	private HashMap<String, PostListOccurence> _postListBuf = 
@@ -66,7 +65,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 
 	public IndexerInvertedOccurrence(Options options) {
 		super(options);
-		_characterMap = new HashMap<Character, Map<String, Map<Integer, List<Integer>>>>();
+		_characterMap = new HashMap<Character, Map<Integer, Map<Integer, List<Integer>>>>();
 		System.out.println("Using Indexer: " + this.getClass().getSimpleName());
 	}
 
@@ -152,11 +151,12 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		int tokenIndex = 0;
 		for (String token : tokens){
 			// improve this if it runs slow. 
-			Character start = token.charAt(0);
+			int tokenId = _dictionary.get(token);
+			char start = token.charAt(0);
 			if (_characterMap.containsKey(start)) {
-				Map<String, Map<Integer, List<Integer>>> wordMap = _characterMap.get(start);
-				if (wordMap.containsKey(token)) {
-					Map<Integer, List<Integer>> docMap = wordMap.get(token);
+				Map<Integer, Map<Integer, List<Integer>>> wordMap = _characterMap.get(start);
+				if (wordMap.containsKey(tokenId)) {
+					Map<Integer, List<Integer>> docMap = wordMap.get(tokenId);
 					if (docMap.containsKey(docId)) {
 						List<Integer> occurenceList = docMap.get(docId);
 						occurenceList.add(tokenIndex);
@@ -166,7 +166,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 						List<Integer> occurrencesList = new ArrayList<Integer>();
 						occurrencesList.add(tokenIndex);
 						docMap.put(docId, occurrencesList);
-						wordMap.put(token, docMap);
+						wordMap.put(tokenId, docMap);
 					}
 				}
 				// if the word map does not have the string
@@ -175,34 +175,34 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 					List<Integer> occurrencesList = new ArrayList<Integer>();
 					occurrencesList.add(tokenIndex);
 					tempInnerMap.put(docId,occurrencesList);
-					wordMap.put(token, tempInnerMap);
+					wordMap.put(tokenId, tempInnerMap);
 				}
 			}
 			else{
-				Map<String,Map<Integer,List<Integer>>> tempMap = new HashMap<String, Map<Integer,List<Integer>>>();
+				Map<Integer,Map<Integer,List<Integer>>> tempMap = new HashMap<Integer, Map<Integer,List<Integer>>>();
 				List<Integer> occurrencesList = new ArrayList<Integer>();
 				occurrencesList.add(tokenIndex);
 				Map<Integer, List<Integer>> tempInnerMap = new TreeMap<Integer, List<Integer>>();
 				tempInnerMap.put(docId,occurrencesList);
-				tempMap.put(token, tempInnerMap);
+				tempMap.put(tokenId, tempInnerMap);
 				_characterMap.put(start, tempMap);
 			}
 			tokenIndex ++ ;
 		}
 	}
 
-	private void writeFile(Map<Character, Map<String, Map<Integer, List<Integer>>>> characterMap, Boolean record)
+	private void writeFile(Map<Character, Map<Integer, Map<Integer, List<Integer>>>> characterMap, Boolean record)
 					throws IOException {
 		int lineNum = 0;
-		for (Entry<Character, Map<String, Map<Integer, List<Integer>>>> entry : characterMap.entrySet()) {
+		for (Entry<Character, Map<Integer, Map<Integer, List<Integer>>>> entry : characterMap.entrySet()) {
 			String path = _options._indexPrefix + "/" + entry.getKey() + ".idx";
 			File file = new File(path);
 			BufferedWriter write = new BufferedWriter(new FileWriter(file, true));
-			Map<String, Map<Integer, List<Integer>>> tempMap = entry.getValue();
-			for (Entry<String, Map<Integer, List<Integer>>> entry1 : tempMap.entrySet()) {
-				String wordName = entry1.getKey();
+			Map<Integer, Map<Integer, List<Integer>>> tempMap = entry.getValue();
+			for (Entry<Integer, Map<Integer, List<Integer>>> entry1 : tempMap.entrySet()) {
+				Integer wordId = entry1.getKey();
 				Map<Integer, List<Integer>> innerMostMap = entry1.getValue();
-				write.write(wordName + "::");
+				write.write(wordId + "::");
 				StringBuffer sb = new StringBuffer();
 				for (Entry<Integer, List<Integer>> innerEntry : innerMostMap.entrySet()) {
 					sb.append(innerEntry.getKey()).append(":").append(innerEntry.getValue()).append("  ");
@@ -210,16 +210,12 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 				write.write(sb.toString() + "\n");
 				lineNum++;
 				if(record){
-					if(_dictionary.containsKey(wordName)){
-						//System.out.println("word: " + wordName + " " + lineNum);
-						int id = _dictionary.get(wordName);
-						_termLineNum.set(id, lineNum);
+						_termLineNum.set(wordId, lineNum);
 					}
 					else{
-						System.out.println(wordName + " is not in _dictionary");
+						System.out.println(wordId + " is not in _dictionary");
 					}
 				}
-			}
 			write.close();
 		}
 	}
@@ -240,7 +236,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		for (String file : files) {
 			if (file.endsWith(".idx")) {
 				System.out.println("merging files " + file);
-				Map<Character, Map<String, Map<Integer, List<Integer>>>> CharacterMap = readAll(file);
+				Map<Character, Map<Integer, Map<Integer, List<Integer>>>> CharacterMap = readAll(file);
 				String fileName = _options._indexPrefix + "/" + file;
 				File charFile = new File(fileName);
 				charFile.delete();
@@ -249,10 +245,10 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		}
 	}
 
-	private Map<Character, Map<String, Map<Integer, List<Integer>>>> readAll(String fileName) throws FileNotFoundException{
-		Map<Character, Map<String, Map<Integer, List<Integer>>>> CharacterMap
-		= new HashMap<Character, Map<String,Map<Integer,List<Integer>>>>();
-		Map<String, Map<Integer, List<Integer>>> tempMap = new HashMap<String, Map<Integer, List<Integer>>>();
+	private Map<Character, Map<Integer, Map<Integer, List<Integer>>>> readAll(String fileName) throws FileNotFoundException{
+		Map<Character, Map<Integer, Map<Integer, List<Integer>>>> CharacterMap
+		= new HashMap<Character, Map<Integer,Map<Integer,List<Integer>>>>();
+		Map<Integer, Map<Integer, List<Integer>>> tempMap = new HashMap<Integer, Map<Integer, List<Integer>>>();
 
 		String file = _options._indexPrefix + "/" + fileName;
 		BufferedReader reader = new BufferedReader(new FileReader(file));
@@ -261,10 +257,10 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		      while ((line = reader.readLine()) != null) {
 		    	  String lineArray[] = line.split("::");
 		    	  if(!lineArray[0].equals("")){
-		    		  String word = lineArray[0];
+		    		  Integer wordId = Integer.parseInt(lineArray[0]);
 		    		  Map<Integer, List<Integer>> innerMap = null;
-		    		  if (tempMap.containsKey(word)){
-		    			  innerMap = tempMap.get(word);
+		    		  if (tempMap.containsKey(wordId)){
+		    			  innerMap = tempMap.get(wordId);
 		    		  }
 		    		  else{
 		    			  innerMap = new TreeMap<Integer, List<Integer>>();
@@ -282,7 +278,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		    				  occurenceList.add(Integer.parseInt(occurence[i]));
 		    			  }		
 		    			  innerMap.put(docId, occurenceList);
-		    			  tempMap.put(word,innerMap);
+		    			  tempMap.put(wordId,innerMap);
 		    		  }
 		    	  }
 		      }
