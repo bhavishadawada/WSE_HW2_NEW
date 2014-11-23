@@ -181,16 +181,15 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		int lineNum = 0;
 		// assign id to file names
 		for(Entry<Character, Map<String, List<Integer>>> entry : _characterMap.entrySet()){
-			String path = _options._indexPrefix + "/" + (int)entry.getKey() + ".idx";
+			String path = _options._indexPrefix + "/" + entry.getKey() + ".idx";
 			System.out.println("The path is" + path);
 			File file = new File(path);
-			FileInputStream fileInput = FileUtils.openInputStream(file);
 			BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
 			Map<String, List<Integer>> docMap = entry.getValue();
 			for(Entry<String, List<Integer>> entry1 : docMap.entrySet()){
 				String wordName = entry1.getKey();
 				List<Integer> docList = entry1.getValue();
-				writer.write(wordName + " ");
+				writer.write(wordName + ":");
 				//StringBuffer sb = new StringBuffer();
 				String tempString = StringUtils.join(docList, " ");
 				writer.write(tempString + "\n");
@@ -258,7 +257,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 		try{
 			String line = null;
 			while ((line = reader.readLine()) != null) {
-				String lineArray[] = line.split(" ");
+				String lineArray[] = line.split(":");
 				if(lineArray.length == 2){
 					String word = lineArray[0];
 					String[] docIDList = lineArray[1].split(" ");

@@ -55,6 +55,8 @@ class DocProcessor{
     			title = s.next();
     			body = s.next();
                 index++;
+                if(index % 100 == 0)
+                    System.out.println(index);
     		}
             else{
                 title = null;
