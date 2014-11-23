@@ -2,7 +2,6 @@ package edu.nyu.cs.cs2580;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -56,7 +55,7 @@ public class RankerFavorite extends Ranker {
 		// Build query vector
 		
 		//System.out.println("title: " + doc.getTitle());
-		List < String > qv = query._tokens;
+		Vector < String > qv = query._tokens;
 
 		// Score the document. 
 		double score = 0.0;

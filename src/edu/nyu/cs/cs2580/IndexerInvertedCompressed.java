@@ -63,10 +63,10 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
   @Override
   public void constructIndex() throws IOException {
 	  _occurIndex.constructIndex();
-	  this._dictionary = _occurIndex._dictionary;
-	  this._documentTermFrequency = _occurIndex._documentTermFrequency;
-	  this._corpusTermFrequency = _occurIndex._corpusTermFrequency;
-	  this._documents = _occurIndex._documents;
+	  this._dictionary = _occurIndex.get_dictionary();
+	  this._documentTermFrequency = _occurIndex.get_documentTermFrequency();
+	  this._corpusTermFrequency = _occurIndex.get_corpusTermFrequency();
+	  this._documents = _occurIndex.get_documents();
 	  this._postListCompressed = new ArrayList<PostListCompressed>(this._dictionary.size());
 
 	  for(int i = 0; i < this._dictionary.size(); i++){
@@ -236,7 +236,7 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 		    		//System.out.println("document found " + nextDocId);
 		    		//check phrase here
 		    		boolean ret = true;
-		    		for(List<String> phrase : query._phraseTokens){
+		    		for(Vector<String> phrase : query._phraseTokens){
 		    			ret = ret & checkPhrase(phrase, nextDocId);
 		    		}
 		    		if(ret){
@@ -257,7 +257,7 @@ public class IndexerInvertedCompressed extends Indexer implements Serializable{
 		}
 	}
 	
-	public boolean checkPhrase(List<String> phrase, int docid){
+	public boolean checkPhrase(Vector<String> phrase, int docid){
 		ArrayList<ArrayList<Integer>> occurLsArr = new ArrayList<ArrayList<Integer>>();
 		ArrayList<Integer> cache = new ArrayList<Integer>();
 		for(String term : phrase){

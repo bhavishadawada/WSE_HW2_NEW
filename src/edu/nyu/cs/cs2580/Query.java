@@ -1,7 +1,5 @@
 package edu.nyu.cs.cs2580;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 import java.util.Vector;
 
@@ -17,7 +15,7 @@ import java.util.Vector;
  */
 public class Query {
   public String _query = null;
-  public List<String> _tokens = new ArrayList<String>();
+  public Vector<String> _tokens = new Vector<String>();
 
   public Query(String query) {
     _query = query;

@@ -34,24 +34,25 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	// Stores all Document in memory.
 	private static final long serialVersionUID = -3852089003709472813L;
 
-	final int BULK_DOC_PROCESSING_SIZE = 1000;
+	final int BULK_DOC_PROCESSING_SIZE = 300;
 
 	// Data structure to maintain unique terms with id
-	 Map<String, Integer> _dictionary = new HashMap<String, Integer>();
+	private Map<String, Integer> _dictionary = new HashMap<String, Integer>();
 
 	// Data structure to store number of times a term occurs in Document
 	// term id --> frequency
-	 ArrayList<Integer> _documentTermFrequency = new ArrayList<Integer>();
+	private ArrayList<Integer> _documentTermFrequency = new ArrayList<Integer>();
 
 	// Data structure to store number of times a term occurs in the complete Corpus
 	// term id --> frequency
-	 ArrayList<Integer> _corpusTermFrequency = new ArrayList<Integer>();
+	private ArrayList<Integer> _corpusTermFrequency = new ArrayList<Integer>();
 	
-	 ArrayList<Integer> _termLineNum = new ArrayList<Integer>();
+	private ArrayList<Integer> _termLineNum = new ArrayList<Integer>();
 	
-	 List<DocumentIndexed> _documents = new ArrayList<DocumentIndexed>();
+	private List<DocumentIndexed> _documents = new ArrayList<DocumentIndexed>();
 
-	private Map<Character, Map<Integer, Map<Integer, List<Integer>>>> _characterMap; 
+	private Map<Character, Map<String, Map<Integer, List<Integer>>>> _characterMap = 
+			new HashMap<Character, Map<String, Map<Integer, List<Integer>>>>();
 	
 	// use buffer of post list to reduce file IO
 	private HashMap<String, PostListOccurence> _postListBuf = 
@@ -65,7 +66,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 
 	public IndexerInvertedOccurrence(Options options) {
 		super(options);
-		_characterMap = new HashMap<Character, Map<Integer, Map<Integer, List<Integer>>>>();
+		_characterMap = new HashMap<Character, Map<String, Map<Integer, List<Integer>>>>();
 		System.out.println("Using Indexer: " + this.getClass().getSimpleName());
 	}
 
@@ -97,7 +98,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		}
 		mergeAll();
 		
-		System.out.println("_dictionary size: " + _dictionary.size());
+		System.out.println("_dictionary size: " + get_dictionary().size());
 		String indexFile = _options._indexPrefix + "/corpus.idx";
 		System.out.println("Write Indexer to " + indexFile);
 
@@ -110,29 +111,28 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		//Document doc = new Document(_documents.size());
 		int docId = _numDocs;
 		++_numDocs;
-		List<String> bodyTermVector = Utility.tokenize2(body);
+		Vector<String> bodyTermVector = Utility.tokenize2(body);
 		// check if this works correctly
 		buildMapFromTokens(bodyTermVector, docId);
 		
-		// iterate over the bodyTermVector and create 
 		Set<String> uniqueTermSetBody = Utility.tokenize(body);
 
 		//build _dictionary
 		for(String token:uniqueTermSetBody){
-	        if(!_dictionary.containsKey(token)){
-	        	_dictionary.put(token, _corpusTermFrequency.size());
-	        	_corpusTermFrequency.add(0);
-	        	_documentTermFrequency.add(0);
+	        if(!get_dictionary().containsKey(token)){
+	        	get_dictionary().put(token, get_corpusTermFrequency().size());
+	        	get_corpusTermFrequency().add(0);
+	        	get_documentTermFrequency().add(0);
 	        	_termLineNum.add(0);
 	        }
-	        int id = _dictionary.get(token);
-	        _documentTermFrequency.set(id, _documentTermFrequency.get(id) + 1);
+	        int id = get_dictionary().get(token);
+	        get_documentTermFrequency().set(id, get_documentTermFrequency().get(id) + 1);
 		}
 		
 		for(String token : bodyTermVector){
-	        if(_dictionary.containsKey(token)){
-	        	int id =_dictionary.get(token);
-				_corpusTermFrequency.set(id, _corpusTermFrequency.get(id) + 1);
+	        if(get_dictionary().containsKey(token)){
+	        	int id = get_dictionary().get(token);
+				get_corpusTermFrequency().set(id, get_corpusTermFrequency().get(id) + 1);
 	        }
 	        else{
 	        	System.out.println(token + " is not in _dictionary in processDocument()");
@@ -144,19 +144,18 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		doc._termNum = bodyTermVector.size();
 		doc.setUrl(Integer.toString(docId));
 
-		_documents.add(doc);
+		get_documents().add(doc);
 	}
 
-	public void buildMapFromTokens(List<String> tokens,int docId){
+	public void buildMapFromTokens(Vector<String> tokens,int docId){
 		int tokenIndex = 0;
 		for (String token : tokens){
 			// improve this if it runs slow. 
-			int tokenId = _dictionary.get(token);
-			char start = token.charAt(0);
+			Character start = token.charAt(0);
 			if (_characterMap.containsKey(start)) {
-				Map<Integer, Map<Integer, List<Integer>>> wordMap = _characterMap.get(start);
-				if (wordMap.containsKey(tokenId)) {
-					Map<Integer, List<Integer>> docMap = wordMap.get(tokenId);
+				Map<String, Map<Integer, List<Integer>>> wordMap = _characterMap.get(start);
+				if (wordMap.containsKey(token)) {
+					Map<Integer, List<Integer>> docMap = wordMap.get(token);
 					if (docMap.containsKey(docId)) {
 						List<Integer> occurenceList = docMap.get(docId);
 						occurenceList.add(tokenIndex);
@@ -166,7 +165,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 						List<Integer> occurrencesList = new ArrayList<Integer>();
 						occurrencesList.add(tokenIndex);
 						docMap.put(docId, occurrencesList);
-						wordMap.put(tokenId, docMap);
+						wordMap.put(token, docMap);
 					}
 				}
 				// if the word map does not have the string
@@ -175,47 +174,52 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 					List<Integer> occurrencesList = new ArrayList<Integer>();
 					occurrencesList.add(tokenIndex);
 					tempInnerMap.put(docId,occurrencesList);
-					wordMap.put(tokenId, tempInnerMap);
+					wordMap.put(token, tempInnerMap);
 				}
 			}
 			else{
-				Map<Integer,Map<Integer,List<Integer>>> tempMap = new HashMap<Integer, Map<Integer,List<Integer>>>();
+				Map<String,Map<Integer,List<Integer>>> tempMap = new HashMap<String, Map<Integer,List<Integer>>>();
 				List<Integer> occurrencesList = new ArrayList<Integer>();
 				occurrencesList.add(tokenIndex);
 				Map<Integer, List<Integer>> tempInnerMap = new TreeMap<Integer, List<Integer>>();
 				tempInnerMap.put(docId,occurrencesList);
-				tempMap.put(tokenId, tempInnerMap);
+				tempMap.put(token, tempInnerMap);
 				_characterMap.put(start, tempMap);
 			}
 			tokenIndex ++ ;
 		}
 	}
 
-	private void writeFile(Map<Character, Map<Integer, Map<Integer, List<Integer>>>> characterMap, Boolean record)
+	private void writeFile(Map<Character, Map<String, Map<Integer, List<Integer>>>> characterMap, Boolean record)
 					throws IOException {
 		int lineNum = 0;
-		for (Entry<Character, Map<Integer, Map<Integer, List<Integer>>>> entry : characterMap.entrySet()) {
+		for (Entry<Character, Map<String, Map<Integer, List<Integer>>>> entry : characterMap.entrySet()) {
 			String path = _options._indexPrefix + "/" + entry.getKey() + ".idx";
 			File file = new File(path);
 			BufferedWriter write = new BufferedWriter(new FileWriter(file, true));
-			Map<Integer, Map<Integer, List<Integer>>> tempMap = entry.getValue();
-			for (Entry<Integer, Map<Integer, List<Integer>>> entry1 : tempMap.entrySet()) {
-				Integer wordId = entry1.getKey();
+			Map<String, Map<Integer, List<Integer>>> tempMap = entry.getValue();
+			for (Entry<String, Map<Integer, List<Integer>>> entry1 : tempMap.entrySet()) {
+				String wordName = entry1.getKey();
 				Map<Integer, List<Integer>> innerMostMap = entry1.getValue();
-				write.write(wordId + "::");
+				write.write(wordName + "::");
 				StringBuffer sb = new StringBuffer();
 				for (Entry<Integer, List<Integer>> innerEntry : innerMostMap.entrySet()) {
 					sb.append(innerEntry.getKey()).append(":").append(innerEntry.getValue()).append("  ");
 				}
-				write.write(sb.toString() + "\n");
+				write.write(sb.toString());
+				write.write("\n");
 				lineNum++;
 				if(record){
-						_termLineNum.set(wordId, lineNum);
+					if(get_dictionary().containsKey(wordName)){
+						//System.out.println("word: " + wordName + " " + lineNum);
+						int id = get_dictionary().get(wordName);
+						_termLineNum.set(id, lineNum);
 					}
 					else{
-						System.out.println(wordId + " is not in _dictionary");
+						System.out.println(wordName + " is not in _dictionary");
 					}
 				}
+			}
 			write.close();
 		}
 	}
@@ -236,7 +240,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		for (String file : files) {
 			if (file.endsWith(".idx")) {
 				System.out.println("merging files " + file);
-				Map<Character, Map<Integer, Map<Integer, List<Integer>>>> CharacterMap = readAll(file);
+				Map<Character, Map<String, Map<Integer, List<Integer>>>> CharacterMap = readAll(file);
 				String fileName = _options._indexPrefix + "/" + file;
 				File charFile = new File(fileName);
 				charFile.delete();
@@ -245,10 +249,10 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		}
 	}
 
-	private Map<Character, Map<Integer, Map<Integer, List<Integer>>>> readAll(String fileName) throws FileNotFoundException{
-		Map<Character, Map<Integer, Map<Integer, List<Integer>>>> CharacterMap
-		= new HashMap<Character, Map<Integer,Map<Integer,List<Integer>>>>();
-		Map<Integer, Map<Integer, List<Integer>>> tempMap = new HashMap<Integer, Map<Integer, List<Integer>>>();
+	private Map<Character, Map<String, Map<Integer, List<Integer>>>> readAll(String fileName) throws FileNotFoundException{
+		Map<Character, Map<String, Map<Integer, List<Integer>>>> CharacterMap
+		= new HashMap<Character, Map<String,Map<Integer,List<Integer>>>>();
+		Map<String, Map<Integer, List<Integer>>> tempMap = new HashMap<String, Map<Integer, List<Integer>>>();
 
 		String file = _options._indexPrefix + "/" + fileName;
 		BufferedReader reader = new BufferedReader(new FileReader(file));
@@ -257,10 +261,10 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		      while ((line = reader.readLine()) != null) {
 		    	  String lineArray[] = line.split("::");
 		    	  if(!lineArray[0].equals("")){
-		    		  Integer wordId = Integer.parseInt(lineArray[0]);
+		    		  String word = lineArray[0];
 		    		  Map<Integer, List<Integer>> innerMap = null;
-		    		  if (tempMap.containsKey(wordId)){
-		    			  innerMap = tempMap.get(wordId);
+		    		  if (tempMap.containsKey(word)){
+		    			  innerMap = tempMap.get(word);
 		    		  }
 		    		  else{
 		    			  innerMap = new TreeMap<Integer, List<Integer>>();
@@ -278,7 +282,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		    				  occurenceList.add(Integer.parseInt(occurence[i]));
 		    			  }		
 		    			  innerMap.put(docId, occurenceList);
-		    			  tempMap.put(wordId,innerMap);
+		    			  tempMap.put(word,innerMap);
 		    		  }
 		    	  }
 		      }
@@ -311,20 +315,20 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 
 	    IndexerInvertedOccurrence loaded = (IndexerInvertedOccurrence) reader.readObject();
 
-	    this._documents = loaded._documents;
-	    this._dictionary = loaded._dictionary;
-	    this._numDocs = _documents.size();
-	    this._corpusTermFrequency = loaded._corpusTermFrequency;
-	    this._documentTermFrequency = loaded._documentTermFrequency;
+	    this.set_documents(loaded.get_documents());
+	    this.set_dictionary(loaded.get_dictionary());
+	    this._numDocs = get_documents().size();
+	    this.set_corpusTermFrequency(loaded.get_corpusTermFrequency());
+	    this.set_documentTermFrequency(loaded.get_documentTermFrequency());
 	    this._termLineNum = loaded._termLineNum;
-	    for (Integer freq : loaded._corpusTermFrequency) {
+	    for (Integer freq : loaded.get_corpusTermFrequency()) {
 	        this._totalTermFrequency += freq;
 	    }
 	    System.out.println(Integer.toString(_numDocs) + " documents loaded " +
 	        "with " + Long.toString(_totalTermFrequency) + " terms!");
 	    reader.close();
 	    
-	    System.out.println("dic size: " + _dictionary.size());
+	    System.out.println("dic size: " + get_dictionary().size());
 	    /*
 	    Query query = new Query("Alfred Matthew");
 	    Document doc = nextDoc(query, -1);
@@ -333,8 +337,6 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	    */
 	}
 	
-	
-
 	public PostListOccurence buildPostLs(String line){
 		String lineArray[] = line.split("::");
 		TreeMap<Integer, ArrayList<Integer>> innerMap = new TreeMap<Integer, ArrayList<Integer>>();
@@ -385,10 +387,15 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		if(_postListBuf.containsKey(term)){
 			return _postListBuf.get(term);
 		}
-		if(_dictionary.containsKey(term)){
+		if(get_dictionary().containsKey(term)){
 
-			int lineNum = _termLineNum.get(_dictionary.get(term));
+			int lineNum = _termLineNum.get(get_dictionary().get(term));
 			String fileName = _options._indexPrefix + "/"+ term.charAt(0) + ".idx";
+
+			//System.out.println("queryTerm " + term);
+			//System.out.println("Search in " + fileName);
+			//System.out.println("lineNum " + lineNum);
+
 			
 			// build post list
 			BufferedReader br;
@@ -479,7 +486,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		    		//System.out.println("document found " + nextDocId);
 		    		//check phrase here
 		    		boolean ret = true;
-		    		for(List<String> phrase : query._phraseTokens){
+		    		for(Vector<String> phrase : query._phraseTokens){
 		    			ret = ret & checkPhrase(phrase, nextDocId);
 		    		}
 		    		if(ret){
@@ -500,7 +507,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		}
 	}
 	
-	public boolean checkPhrase(List<String> phrase, int docid){
+	public boolean checkPhrase(Vector<String> phrase, int docid){
 		ArrayList<ArrayList<Integer>> occurLsArr = new ArrayList<ArrayList<Integer>>();
 		ArrayList<Integer> cache = new ArrayList<Integer>();
 		for(String term : phrase){
@@ -589,22 +596,22 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	// number of documents the term occurs in
 	@Override
 	public int corpusDocFrequencyByTerm(String term) {
-		return _dictionary.containsKey(term) ?
-				_documentTermFrequency.get(_dictionary.get(term)) : 0;
+		return get_dictionary().containsKey(term) ?
+				get_documentTermFrequency().get(get_dictionary().get(term)) : 0;
 	}
 
 	//number of times a term appears in corpus
 	@Override
 	public int corpusTermFrequency(String term) {
-		return _dictionary.containsKey(term) ?
-				_corpusTermFrequency.get(_dictionary.get(term)) : 0;
+		return get_dictionary().containsKey(term) ?
+				get_corpusTermFrequency().get(get_dictionary().get(term)) : 0;
 	}
 
 	// number of times a term occurs in document
 	@Override
 	public int documentTermFrequency(String term, String url) {
 		int docid = Integer.parseInt(url);
-		if(_dictionary.containsKey(term)){
+		if(get_dictionary().containsKey(term)){
 			PostListOccurence postLs = getPostList(term);
 			return postLs.data.get(docid).size();
 		}
@@ -616,13 +623,43 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	@Override
 	public int documentTotalTermFrequency(String url) {
 		int docid = Integer.parseInt(url);
-		if(docid < _documents.size()){
-			return _documents.get(docid)._termNum;
+		if(docid < get_documents().size()){
+			return get_documents().get(docid)._termNum;
 		}
 		else{
 			return 0;
 		}
 	}
 
+	public Map<String, Integer> get_dictionary() {
+		return _dictionary;
+	}
 
+	public void set_dictionary(Map<String, Integer> _dictionary) {
+		this._dictionary = _dictionary;
+	}
+
+	public ArrayList<Integer> get_documentTermFrequency() {
+		return _documentTermFrequency;
+	}
+
+	public void set_documentTermFrequency(ArrayList<Integer> _documentTermFrequency) {
+		this._documentTermFrequency = _documentTermFrequency;
+	}
+
+	public ArrayList<Integer> get_corpusTermFrequency() {
+		return _corpusTermFrequency;
+	}
+
+	public void set_corpusTermFrequency(ArrayList<Integer> _corpusTermFrequency) {
+		this._corpusTermFrequency = _corpusTermFrequency;
+	}
+
+	public List<DocumentIndexed> get_documents() {
+		return _documents;
+	}
+
+	public void set_documents(List<DocumentIndexed> _documents) {
+		this._documents = _documents;
+	}
 }

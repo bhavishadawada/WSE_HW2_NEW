@@ -33,8 +33,8 @@ public class Utility {
 		return uniqueTermSet;
 	}
 
-	public static List<String> tokenize2(String document){
-		List<String> tokenList = new ArrayList<String>();
+	public static Vector<String> tokenize2(String document){
+		Vector<String> tokenVec = new Vector<String>();
 		
 		String str;
         Pattern ptn = Pattern.compile("([^a-zA-Z0-9])");
@@ -44,10 +44,10 @@ public class Utility {
 		while(st.hasMoreTokens()){
 			String token = st.nextToken().toLowerCase().trim();
 			if(token.length() > 0){
-				tokenList.add(token);
+				tokenVec.add(token);
 			}
 		}
-		return tokenList;
+		return tokenVec;
 	}
 	
 	
