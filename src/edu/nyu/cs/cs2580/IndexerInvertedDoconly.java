@@ -134,7 +134,7 @@ public class IndexerInvertedDoconly extends Indexer implements Serializable{
 			_documentTermFrequency.set(id, _documentTermFrequency.get(id) + 1);
 		}
 
-		Vector<String> bodyTermVector = Utility.tokenize2(body);
+		List<String> bodyTermVector = Utility.tokenize2(body);
 		for(String token : bodyTermVector){
 			int id = _dictionary.get(token);
 			_corpusTermFrequency.set(id, _corpusTermFrequency.get(id) + 1);

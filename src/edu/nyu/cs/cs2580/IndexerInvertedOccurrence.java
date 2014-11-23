@@ -37,19 +37,19 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 	final int BULK_DOC_PROCESSING_SIZE = 300;
 
 	// Data structure to maintain unique terms with id
-	private Map<String, Integer> _dictionary = new HashMap<String, Integer>();
+	Map<String, Integer> _dictionary = new HashMap<String, Integer>();
 
 	// Data structure to store number of times a term occurs in Document
 	// term id --> frequency
-	private ArrayList<Integer> _documentTermFrequency = new ArrayList<Integer>();
+	ArrayList<Integer> _documentTermFrequency = new ArrayList<Integer>();
 
 	// Data structure to store number of times a term occurs in the complete Corpus
 	// term id --> frequency
-	private ArrayList<Integer> _corpusTermFrequency = new ArrayList<Integer>();
+	ArrayList<Integer> _corpusTermFrequency = new ArrayList<Integer>();
 	
 	private ArrayList<Integer> _termLineNum = new ArrayList<Integer>();
 	
-	private List<DocumentIndexed> _documents = new ArrayList<DocumentIndexed>();
+	List<DocumentIndexed> _documents = new ArrayList<DocumentIndexed>();
 
 	private Map<Character, Map<String, Map<Integer, List<Integer>>>> _characterMap = 
 			new HashMap<Character, Map<String, Map<Integer, List<Integer>>>>();
@@ -111,7 +111,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		//Document doc = new Document(_documents.size());
 		int docId = _numDocs;
 		++_numDocs;
-		Vector<String> bodyTermVector = Utility.tokenize2(body);
+		List<String> bodyTermVector = Utility.tokenize2(body);
 		// check if this works correctly
 		buildMapFromTokens(bodyTermVector, docId);
 		
@@ -147,7 +147,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		get_documents().add(doc);
 	}
 
-	public void buildMapFromTokens(Vector<String> tokens,int docId){
+	public void buildMapFromTokens(List<String> tokens,int docId){
 		int tokenIndex = 0;
 		for (String token : tokens){
 			// improve this if it runs slow. 
@@ -486,7 +486,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		    		//System.out.println("document found " + nextDocId);
 		    		//check phrase here
 		    		boolean ret = true;
-		    		for(Vector<String> phrase : query._phraseTokens){
+		    		for(List<String> phrase : query._phraseTokens){
 		    			ret = ret & checkPhrase(phrase, nextDocId);
 		    		}
 		    		if(ret){
@@ -507,7 +507,7 @@ public class IndexerInvertedOccurrence extends Indexer  implements Serializable{
 		}
 	}
 	
-	public boolean checkPhrase(Vector<String> phrase, int docid){
+	public boolean checkPhrase(List<String> phrase, int docid){
 		ArrayList<ArrayList<Integer>> occurLsArr = new ArrayList<ArrayList<Integer>>();
 		ArrayList<Integer> cache = new ArrayList<Integer>();
 		for(String term : phrase){
