@@ -448,11 +448,13 @@ public ArrayList<Integer> getPostList(String term){
 	}
 	if(_dictionary.containsKey(term)){
 
-		int lineNum = _termLineNum.get(_dictionary.get(term));
+		int termId = _dictionary.get(term);
+		int lineNum = _termLineNum.get(termId);
 		String fileName = _options._indexPrefix + "/"+ term.charAt(0) + ".idx";
 
 
 		System.out.println("queryTerm " + term);
+		System.out.println("termId " + termId);
 		System.out.println("Search in " + fileName);
 		System.out.println("lineNum " + lineNum);
 
